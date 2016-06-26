@@ -49,7 +49,7 @@ and
 
 [source,java]
 ----
-public static JsonVerifiable assertThat(DocumentContext parsedJson)
+public static JsonVerifiable assertThat(DocumentContext parsedXml)
 ----
 
 Both these methods give return the public `JsonVerifiable` interface which is a fluent interface with which you can build your

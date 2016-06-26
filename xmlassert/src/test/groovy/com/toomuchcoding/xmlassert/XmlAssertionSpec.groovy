@@ -1,4 +1,4 @@
-package com.toomuchcoding.jsonassert
+package com.toomuchcoding.xmlassert
 
 import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
@@ -12,6 +12,39 @@ import static XmlAssertion.assertThatXml
 import static groovy.json.JsonOutput.toJson
 /**
  * @author Marcin Grzejszczak
+ *
+ *
+
+ <root>
+ <list>
+ <a>A</a>
+ <list2>
+ <primitive>A</primitive>
+ <primitive>4</primitive>
+ <element>
+ <name>B</name>
+ <value>1</value>
+ <anotherlist>
+ <simple>A</simple>
+ <simple>B</simple>
+ </anotherlist>
+ </element>
+ <element>
+ <name>C</name>
+ <value>10</value>
+ </element>
+ </list2>
+ </list>
+ </root>
+
+ Primitive: /root/list/list2/primitive[text()='D']
+ Primitive number: /root/list/list2/primitive[text()=4]
+ Complex: /root/list/list2/element[name='B']
+ More Complex: /root/list/list2/element[name='B']/anotherlist/simple[text()='B']
+
+
+
+ *
  */
 public class XmlAssertionSpec extends Specification {
 
@@ -34,14 +67,14 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                                                           || expectedJsonPath
-            assertThat(xml1).field("some").field("nested").field("anothervalue").isEqualTo(4)                    || '''$.some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml1).field("some").field("nested").field("anothervalue")                                 || '''$.some.nested.anothervalue'''
-            assertThatXml(xml1).field("some").field("nested").field("anothervalue").isEqualTo(4)                 || '''$.some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml1).field("some").field("nested").array("withlist").contains("name").isEqualTo("name1") || '''$.some.nested.withlist[*][?(@.name == 'name1')]'''
-            assertThat(xml1).field("some").field("nested").array("withlist").contains("name").isEqualTo("name2") || '''$.some.nested.withlist[*][?(@.name == 'name2')]'''
-            assertThat(xml1).field("some").field("nested").field("json").isEqualTo("with \"val'ue")              || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
-            assertThat(xml1).field("some", "nested", "json").isEqualTo("with \"val'ue")                          || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
+            verifiable                                                                                         || expectedJsonPath
+            assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                     || '''$.some.nested[?(@.anothervalue == 4)]'''
+            assertThat(xml1).node("some").node("nested").node("anothervalue")                                  || '''$.some.nested.anothervalue'''
+            assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                  || '''$.some.nested[?(@.anothervalue == 4)]'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1") || '''$.some.nested.withlist[*][?(@.name == 'name1')]'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2") || '''$.some.nested.withlist[*][?(@.name == 'name2')]'''
+            assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")               || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
+            assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                         || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
     }
 
     @Shared String xml2 =  '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -54,9 +87,9 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                         || expectedJsonPath
-            assertThat(xml2).field("property1").isEqualTo("a") || '''$[?(@.property1 == 'a')]'''
-            assertThat(xml2).field("property2").isEqualTo("b") || '''$[?(@.property2 == 'b')]'''
+            verifiable                                        || expectedJsonPath
+            assertThat(xml2).node("property1").isEqualTo("a") || '''$[?(@.property1 == 'a')]'''
+            assertThat(xml2).node("property2").isEqualTo("b") || '''$[?(@.property2 == 'b')]'''
     }
 
     @Shared String xml3 =  '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -70,10 +103,10 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                            || expectedJsonPath
-            assertThat(xml3).field("property1").isEqualTo("true") || '''$[?(@.property1 == 'true')]'''
-            assertThat(xml3).field("property2").isNull()          || '''$[?(@.property2 == null)]'''
-            assertThat(xml3).field("property3").isEqualTo(false)  || '''$[?(@.property3 == false)]'''
+            verifiable                                           || expectedJsonPath
+            assertThat(xml3).node("property1").isEqualTo("true") || '''$[?(@.property1 == 'true')]'''
+            assertThat(xml3).node("property2").isNull()          || '''$[?(@.property2 == null)]'''
+            assertThat(xml3).node("property3").isEqualTo(false)  || '''$[?(@.property3 == false)]'''
     }
 
     @Shared Map xml4 =  [
@@ -90,7 +123,7 @@ public class XmlAssertionSpec extends Specification {
             verifiable.xPath() == expectedJsonPath
         where:
             verifiable                                                                     || expectedJsonPath
-            assertThat(toJson(xml4)).field("property1").isEqualTo("a")                     || '''$[?(@.property1 == 'a')]'''
+            assertThat(toJson(xml4)).node("property1").isEqualTo("a")                      || '''$[?(@.property1 == 'a')]'''
             assertThat(toJson(xml4)).array("property2").contains("a").isEqualTo("sth")     || '''$.property2[*][?(@.a == 'sth')]'''
             assertThat(toJson(xml4)).array("property2").contains("b").isEqualTo("sthElse") || '''$.property2[*][?(@.b == 'sthElse')]'''
     }
@@ -107,9 +140,9 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                          || expectedJsonPath
-            assertThat(toJson(xml5)).field("property").field(7).isEqualTo(0.0)  || '''$.property[?(@.7 == 0.0)]'''
-            assertThat(toJson(xml5)).field("property").field(14).isEqualTo(0.0) || '''$.property[?(@.14 == 0.0)]'''
+            verifiable                                                        || expectedJsonPath
+            assertThat(toJson(xml5)).node("property").node(7).isEqualTo(0.0)  || '''$.property[?(@.7 == 0.0)]'''
+            assertThat(toJson(xml5)).node("property").node(14).isEqualTo(0.0) || '''$.property[?(@.14 == 0.0)]'''
     }
 
     @Shared String xml6 =  '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -161,9 +194,9 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                            || expectedJsonPath
-            assertThat(xml8).field("property2").field("property3").isEqualTo("b") || '''$.property2[?(@.property3 == 'b')]'''
-            assertThat(xml8).field("property1").isEqualTo("a")                    || '''$[?(@.property1 == 'a')]'''
+            verifiable                                                          || expectedJsonPath
+            assertThat(xml8).node("property2").node("property3").isEqualTo("b") || '''$.property2[?(@.property3 == 'b')]'''
+            assertThat(xml8).node("property1").isEqualTo("a")                   || '''$[?(@.property1 == 'a')]'''
     }
 
     @Shared Map xml9 =  [
@@ -176,9 +209,9 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                      || expectedJsonPath
-            assertThat(toJson(xml9)).field("property2").matches("[0-9]{3}") || '''$[?(@.property2 =~ /[0-9]{3}/)]'''
-            assertThat(toJson(xml9)).field("property1").isEqualTo("a")      || '''$[?(@.property1 == 'a')]'''
+            verifiable                                                     || expectedJsonPath
+            assertThat(toJson(xml9)).node("property2").matches("[0-9]{3}") || '''$[?(@.property2 =~ /[0-9]{3}/)]'''
+            assertThat(toJson(xml9)).node("property1").isEqualTo("a")      || '''$[?(@.property1 == 'a')]'''
     }
 
     def "should generate escaped regex assertions for string objects in response body"() {
@@ -187,7 +220,7 @@ public class XmlAssertionSpec extends Specification {
                 property2: 123123
         ]
         expect:
-            def verifiable = assertThat(toJson(json)).field("property2").matches("\\d+")
+            def verifiable = assertThat(toJson(json)).node("property2").matches("\\d+")
             verifiable.xPath() == '''$[?(@.property2 =~ /\\d+/)]'''
     }
 
@@ -226,22 +259,22 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                                                                                            || expectedJsonPath
-            assertThat(xml11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.995548).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.995548)]'''
-            assertThat(xml11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-77.119759).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -77.119759)]'''
-            assertThat(xml11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-76.909393).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -76.909393)]'''
-            assertThat(xml11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.791645).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]'''
+            verifiable                                                                                                                          || expectedJsonPath
+            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(38.995548).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.995548)]'''
+            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(-77.119759).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -77.119759)]'''
+            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(-76.909393).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -76.909393)]'''
+            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(38.791645).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]'''
 
     }
 
     @Unroll
     def 'should convert a json with list as root to a map of path to value'() {
         expect:
-            assertThat(xml).array().field("some").field("nested").field("json").isEqualTo("with value").xPath() == '''$[*].some.nested[?(@.json == 'with value')]'''
-            assertThat(xml).array().field("some").field("nested").field("anothervalue").isEqualTo(4).xPath() == '''$[*].some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml).array().field("some").field("nested").array("withlist").contains("name").isEqualTo("name1").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name1')]'''
-            assertThat(xml).array().field("some").field("nested").array("withlist").contains("name").isEqualTo("name2").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name2')]'''
-            assertThat(xml).array().field("some").field("nested").array("withlist").field("anothernested").field("name").isEqualTo("name3").xPath() == '''$[*].some.nested.withlist[*].anothernested[?(@.name == 'name3')]'''
+            assertThat(xml).array().node("some").node("nested").node("json").isEqualTo("with value").xPath() == '''$[*].some.nested[?(@.json == 'with value')]'''
+            assertThat(xml).array().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath() == '''$[*].some.nested[?(@.anothervalue == 4)]'''
+            assertThat(xml).array().node("some").node("nested").array("withlist").contains("name").isEqualTo("name1").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name1')]'''
+            assertThat(xml).array().node("some").node("nested").array("withlist").contains("name").isEqualTo("name2").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name2')]'''
+            assertThat(xml).array().node("some").node("nested").array("withlist").node("anothernested").node("name").isEqualTo("name3").xPath() == '''$[*].some.nested.withlist[*].anothernested[?(@.name == 'name3')]'''
         where:
         xml << [
                 '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -328,7 +361,7 @@ public class XmlAssertionSpec extends Specification {
         and:
             String jsonPath = '''$[?(@.property1 == 'a')]'''
         expect:
-            assertThat(xml).matchesJsonPath(jsonPath)
+            assertThat(xml).matchesXPath(jsonPath)
     }
 
     def "should throw exception when json path is not matched"() {
@@ -343,7 +376,7 @@ public class XmlAssertionSpec extends Specification {
         and:
             String jsonPath = '''$[?(@.property1 == 'c')]'''
         when:
-            assertThat(xml).matchesJsonPath(jsonPath)
+            assertThat(xml).matchesXPath(jsonPath)
         then:
             IllegalStateException illegalStateException = thrown(IllegalStateException)
             illegalStateException.message.contains("Parsed JSON")
@@ -361,7 +394,7 @@ public class XmlAssertionSpec extends Specification {
         and:
             String jsonPath = '''$[?(@.property1 == 'c')]'''
         when:
-            assertThat(xml).withoutThrowingException().matchesJsonPath(jsonPath)
+            assertThat(xml).withoutThrowingException().matchesXPath(jsonPath)
         then:
             noExceptionThrown()
     }
@@ -372,7 +405,7 @@ public class XmlAssertionSpec extends Specification {
                 property2: true
         ]
         expect:
-        def verifiable = assertThat(toJson(xml)).field("property2").matches('true|false')
+        def verifiable = assertThat(toJson(xml)).node("property2").matches('true|false')
         verifiable.xPath() == '''$[?(@.property2 =~ /true|false/)]'''
     }
 
@@ -382,7 +415,7 @@ public class XmlAssertionSpec extends Specification {
                 property2: 50
         ]
         expect:
-        def verifiable = assertThat(toJson(xml)).field("property2").matches('[0-9]{2}')
+        def verifiable = assertThat(toJson(xml)).node("property2").matches('[0-9]{2}')
         verifiable.xPath() == '''$[?(@.property2 =~ /[0-9]{2}/)]'''
     }
 
@@ -393,7 +426,7 @@ public class XmlAssertionSpec extends Specification {
     <correlationId>123456</correlationId>"""
         expect:
         DocumentContext parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).field("path").matches("^/api/[0-9]{2}\$")
+        def verifiable = assertThatXml(parsedJson).node("path").matches("^/api/[0-9]{2}\$")
         verifiable.xPath() == '''$[?(@.path =~ /^\\/api\\/[0-9]{2}$/)]'''
     }
 
@@ -405,7 +438,7 @@ public class XmlAssertionSpec extends Specification {
         """
         expect:
         DocumentContext parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).field("text").isEqualTo("text with 'quotes' inside")
+        def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
         verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
     }
 
@@ -416,7 +449,7 @@ public class XmlAssertionSpec extends Specification {
         """
         expect:
         DocumentContext parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).field("text").isEqualTo("text with 'quotes' inside")
+        def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
         verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
     }
 
@@ -428,7 +461,7 @@ public class XmlAssertionSpec extends Specification {
             """
         expect:
             DocumentContext parsedJson = JsonPath.parse(xml)
-            def verifiable = assertThatXml(parsedJson).field("text").isEqualTo('''text with "quotes" inside''')
+            def verifiable = assertThatXml(parsedJson).node("text").isEqualTo('''text with "quotes" inside''')
             verifiable.xPath() == '''$[?(@.text == 'text with "quotes" inside')]'''
     }
 
@@ -475,11 +508,11 @@ public class XmlAssertionSpec extends Specification {
 
         '''
         expect:
-            XPath.builder(xml).array().field("some").field("nested").field("json").read(String) == 'with value'
-            XPath.builder(xml).array().field("some").field("nested").field("anothervalue").read(Integer) == 4
-            assertThat(xml).array().field("some").field("nested").array("withlist").field("name").read(List) == ['name1', 'name2']
-            assertThat(xml).array().field("someother").field("nested").array("withlist2").read(List) == ['a', 'b']
-            assertThat(xml).array().field("someother").field("nested").field("json").read(Boolean) == true
+            XPath.builder(xml).array().node("some").node("nested").node("json").read(String) == 'with value'
+            XPath.builder(xml).array().node("some").node("nested").node("anothervalue").read(Integer) == 4
+            assertThat(xml).array().node("some").node("nested").array("withlist").node("name").read(List) == ['name1', 'name2']
+            assertThat(xml).array().node("someother").node("nested").array("withlist2").read(List) == ['a', 'b']
+            assertThat(xml).array().node("someother").node("nested").node("json").read(Boolean) == true
     }
 
     def 'should assert xml with only top list elements'() {

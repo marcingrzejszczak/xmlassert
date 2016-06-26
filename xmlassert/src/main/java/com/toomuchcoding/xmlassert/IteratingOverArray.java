@@ -1,17 +1,13 @@
-package com.toomuchcoding.jsonassert;
+package com.toomuchcoding.xmlassert;
 
 /**
  * Helper interface describing the process of current iteration
  *
  * @author Marcin Grzejszczak
  *
- * @since 0.1.0
+ * @since 0.0.1
  */
 public interface IteratingOverArray {
-    /**
-     * True if is in progress of iterating over nameless array
-     */
-    boolean isIteratingOverNamelessArray();
 
     /**
      * True if is in progress of iterating over an array
