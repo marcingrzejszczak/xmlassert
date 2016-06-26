@@ -2,36 +2,55 @@ package com.toomuchcoding.xmlassert;
 
 import java.util.LinkedList;
 
-import org.w3c.dom.Document;
-
 class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
 
-    boolean checkingPrimitiveType = true;
+    final boolean checkingPrimitiveType;
 
-    protected ArrayValueAssertion(Document parsedXml, LinkedList<String> jsonPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
                                   Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(parsedXml, jsonPathBuffer, arrayName, xmlAsserterConfiguration);
+        super(cachedObjects, jsonPathBuffer, arrayName, xmlAsserterConfiguration);
+        this.checkingPrimitiveType = true;
     }
 
-    protected ArrayValueAssertion(Document parsedXml, LinkedList<String> jsonPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
+                                  Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration,
+                                  boolean checkingPrimitiveType) {
+        super(cachedObjects, jsonPathBuffer, arrayName, xmlAsserterConfiguration);
+        this.checkingPrimitiveType = checkingPrimitiveType;
+    }
+
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
                                   XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(parsedXml, jsonPathBuffer, null, xmlAsserterConfiguration);
+        super(cachedObjects, jsonPathBuffer, null, xmlAsserterConfiguration);
+        this.checkingPrimitiveType = true;
+    }
+
+    protected ArrayValueAssertion(XmlAsserter asserter, boolean checkingPrimitiveType) {
+        super(asserter);
+        this.checkingPrimitiveType = checkingPrimitiveType;
     }
 
     @Override
     public XmlArrayVerifiable contains(String value) {
-        return new ArrayValueAssertion(parsedXml, xPathBuffer, value,
-                xmlAsserterConfiguration);
+        return new ArrayValueAssertion(cachedObjects, xPathBuffer, value,
+                xmlAsserterConfiguration, false);
     }
 
-    @Override public FieldAssertion node(String value) {
-        checkingPrimitiveType = false;
-        return super.node(value);
+    @Override
+    public FieldAssertion node(String value) {
+        FieldAssertion assertion = super.node(value);
+        return new ArrayValueAssertion(assertion, false);
     }
 
-    @Override public FieldAssertion node(String... nodeNames) {
-        checkingPrimitiveType = false;
-        return super.node(nodeNames);
+    @Override
+    public FieldAssertion node(String... nodeNames) {
+        FieldAssertion assertion = super.node(nodeNames);
+        return new ArrayValueAssertion(assertion, false);
+    }
+
+    @Override
+    protected void removeLastFieldElement(XmlAsserter readyToCheck) {
+        readyToCheck.xPathBuffer.removeLast();
     }
 
     @Override
@@ -39,8 +58,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        return equalityOnAPrimitive(parsedXml, xPathBuffer, fieldName, xmlAsserterConfiguration,
-                "[text()=" + wrapValueWithSingleQuotes(value) + "]");
+        return equalityOnAPrimitive("[text()=" + escapeTextForXPath(value) + "]");
     }
 
     @Override
@@ -48,16 +66,14 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        return equalityOnAPrimitive(parsedXml, xPathBuffer, fieldName,
-                xmlAsserterConfiguration, "[text()=" + String.valueOf(value) + "]");
+        return equalityOnAPrimitive("[text()=" + String.valueOf(value) + "]");
     }
 
-    private XmlVerifiable equalityOnAPrimitive(Document parsedXml,
-            LinkedList<String> xPathBuffer, Object fieldName,
-            XmlAsserterConfiguration xmlAsserterConfiguration, String e) {
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+    private XmlVerifiable equalityOnAPrimitive(String xPath) {
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.offer(e);
+        readyToCheck.xPathBuffer.removeLast();
+        readyToCheck.xPathBuffer.offer(xPath);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
     }
@@ -67,9 +83,9 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.matches(value);
         }
-        return equalityOnAPrimitive(parsedXml, xPathBuffer, fieldName, xmlAsserterConfiguration,
+        return equalityOnAPrimitive(
                 "[matches(text(), " +
-						wrapValueWithSingleQuotes(stringWithEscapedSingleQuotesForRegex(value)) + ")]");
+						escapeTextForXPath(value) + ")]");
     }
 
     @Override
@@ -77,7 +93,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
         readyToCheck.xPathBuffer.offer("[text()=" + String.valueOf(value) + "]");
         readyToCheck.checkBufferedXPathString();

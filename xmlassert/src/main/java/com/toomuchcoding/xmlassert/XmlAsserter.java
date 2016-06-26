@@ -1,47 +1,60 @@
 package com.toomuchcoding.xmlassert;
 
-import java.util.LinkedList;
-import java.util.regex.Pattern;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
 
-import net.minidev.json.JSONArray;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathConstants;
+import javax.xml.xpath.XPathExpression;
+import javax.xml.xpath.XPathExpressionException;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.regex.Pattern;
 
-/**
-
- XPathFactory xPathfactory = XPathFactory.newInstance();
- XPath xpath = xPathfactory.newXPath();
- XPathExpression expr = xpath.compile(<xpath_expression>);
-
- XPathExpression expr = xpath.compile("/howto/topic[@name='PowerBuilder']/url");
- NodeList nl = (NodeList) expr.evaluate(doc, XPathConstants.NODESET);
-
- */
 class XmlAsserter implements XmlVerifiable {
 
     private static final Logger log = LoggerFactory.getLogger(XmlAsserter.class);
 
-    protected final Document parsedXml;
+    protected final XmlCachedObjects cachedObjects;
     protected final LinkedList<String> xPathBuffer;
     protected final Object fieldName;
     protected final XmlAsserterConfiguration xmlAsserterConfiguration;
 
-    protected XmlAsserter(Document parsedXml, LinkedList<String> xPathBuffer,
-                           Object fieldName, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        this.parsedXml = parsedXml;
+    protected XmlAsserter(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
+                          Object fieldName, XmlAsserterConfiguration xmlAsserterConfiguration) {
+        this.cachedObjects = cachedObjects;
         this.xPathBuffer = new LinkedList<String>(xPathBuffer);
         this.fieldName = fieldName;
         this.xmlAsserterConfiguration = xmlAsserterConfiguration;
     }
 
+    protected XmlAsserter(XmlAsserter asserter) {
+        this.cachedObjects = asserter.cachedObjects;
+        this.xPathBuffer = new LinkedList<String>(asserter.xPathBuffer);
+        this.fieldName = asserter.fieldName;
+        this.xmlAsserterConfiguration = asserter.xmlAsserterConfiguration;
+    }
+
     @Override
     public FieldAssertion node(final String value) {
-        FieldAssertion asserter = new FieldAssertion(parsedXml, xPathBuffer, value,
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, value,
                 xmlAsserterConfiguration);
         asserter.xPathBuffer.offer(String.valueOf(value));
         asserter.xPathBuffer.offer("/");
+        return asserter;
+    }
+
+    @Override
+    public XmlVerifiable withAttribute(String attribute, String attributeValue) {
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, fieldName,
+                xmlAsserterConfiguration);
+        if (asserter.xPathBuffer.peekLast().equals("/")) {
+            asserter.xPathBuffer.removeLast();
+        }
+        asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeTextForXPath(attributeValue) + ")");
+        updateCurrentBuffer(asserter);
+        asserter.checkBufferedXPathString();
         return asserter;
     }
 
@@ -56,7 +69,7 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public XmlArrayVerifiable array(final String value) {
-        ArrayValueAssertion asserter = new ArrayValueAssertion(parsedXml, xPathBuffer, value,
+        ArrayValueAssertion asserter = new ArrayValueAssertion(cachedObjects, xPathBuffer, value,
                 xmlAsserterConfiguration);
         asserter.xPathBuffer.offer(String.valueOf(value));
         asserter.xPathBuffer.offer("/");
@@ -68,10 +81,10 @@ class XmlAsserter implements XmlVerifiable {
         if (value == null) {
             return isNull();
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.removeLast();
-        readyToCheck.xPathBuffer.offer("[?(@." + String.valueOf(fieldName) + " == " + wrapValueWithSingleQuotes(value) + ")]");
+        removeLastFieldElement(readyToCheck);
+        readyToCheck.xPathBuffer.offer("[" + fieldName + "=" + escapeTextForXPath(value) + "]");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -102,21 +115,38 @@ class XmlAsserter implements XmlVerifiable {
         if (value == null) {
             return isNull();
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+        return xmlVerifiableFromObject(value);
+    }
+
+    private XmlVerifiable xmlVerifiableFromObject(Object value) {
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.removeLast();
+        removeLastFieldElement(readyToCheck);
         readyToCheck.xPathBuffer.offer("[" + fieldName + "=" + String.valueOf(value) + "]");
+        // and finally '/foo/bar[baz='sth']
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
     }
 
+    protected void removeLastFieldElement(XmlAsserter readyToCheck) {
+        // assuming /foo/bar/baz/
+        // remove '/'
+        readyToCheck.xPathBuffer.removeLast();
+        // remove field name ('baz')
+        readyToCheck.xPathBuffer.removeLast();
+        // remove '/'
+        readyToCheck.xPathBuffer.removeLast();
+        // and then we get '/foo/bar'
+    }
+
     @Override
     public XmlVerifiable isNull() {
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.removeLast();
-        readyToCheck.xPathBuffer.offer("[?(@." + String.valueOf(fieldName) + " == null)]");
+        String xpath = createXPathString();
+        readyToCheck.xPathBuffer.clear();
+        readyToCheck.xPathBuffer.offer("boolean(" + xpath + "/text()[1])");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -127,11 +157,11 @@ class XmlAsserter implements XmlVerifiable {
         if (value == null) {
             return isNull();
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
+        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
         readyToCheck.xPathBuffer.removeLast();
-        readyToCheck.xPathBuffer.offer("[?(@." + String.valueOf(fieldName)
-                + " =~ /" + stringWithEscapedSingleQuotesForRegex(value) + "/)]");
+        readyToCheck.xPathBuffer.offer("[matches(" + fieldName + ", " +
+                wrapValueWithSingleQuotes(escapeTextForXPath(value)) + ")]");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -142,21 +172,7 @@ class XmlAsserter implements XmlVerifiable {
         if (value == null) {
             return isNull();
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(parsedXml,
-                xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.removeLast();
-        readyToCheck.xPathBuffer.offer("[?(@." + String.valueOf(fieldName) + " == " + String.valueOf(value) + ")]");
-        updateCurrentBuffer(readyToCheck);
-        readyToCheck.checkBufferedXPathString();
-        return readyToCheck;
-    }
-
-    @Override
-    public XmlVerifiable value() {
-        ReadyToCheckAsserter readyToCheckAsserter = new ReadyToCheckAsserter(parsedXml,
-                xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheckAsserter.checkBufferedXPathString();
-        return readyToCheckAsserter;
+        return xmlVerifiableFromObject(value);
     }
 
     @Override
@@ -165,39 +181,54 @@ class XmlAsserter implements XmlVerifiable {
         return this;
     }
 
-    private void check(String jsonPathString) {
+    private void check(String xPathString) {
         if (xmlAsserterConfiguration.ignoreXPathException) {
             log.trace("WARNING!!! Overriding verification of the XPath. Your tests may pass even though they shouldn't");
             return;
         }
         boolean empty;
         try {
-            empty = parsedXml.read(jsonPathString, JSONArray.class).isEmpty();
+            XPathExpression expr = xPathExpression(xPathString);
+            NodeList nl = (NodeList) expr.evaluate(cachedObjects.document, XPathConstants.NODESET);
+            empty = nl.getLength() == 0;
         } catch (Exception e) {
-           log.error("Exception occurred while trying to match XPath [{}]", jsonPathString, e);
+           log.error("Exception occurred while trying to match XPath <{}>", xPathString, e);
            throw new RuntimeException(e);
         }
         if (empty) {
-            throw new IllegalStateException("Parsed JSON [" + parsedXml.jsonString() + "] doesn't match the XPath [" + jsonPathString + "]");
+            throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] doesn't match the XPath <" + xPathString + ">");
+        }
+    }
+
+    private XPathExpression xPathExpression(String xPathString) {
+        XPath xpath = cachedObjects.factory.newXPath();
+        try {
+            return xpath.compile(xPathString);
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException("For XPath <" + xPathString + "> " +
+                    "XPath compile exception occurred", e);
         }
     }
 
     protected void checkBufferedXPathString() {
-        check(createJsonPathString());
+        check(createXPathString());
     }
 
-    private String createJsonPathString() {
+    private String createXPathString() {
         LinkedList<String> queue = new LinkedList<String>(xPathBuffer);
         StringBuilder stringBuffer = new StringBuilder();
         while (!queue.isEmpty()) {
-            stringBuffer.append(queue.remove());
+            String value = queue.remove();
+            if (!(queue.isEmpty() && value.equals("/"))) {
+                stringBuffer.append(value);
+            }
         }
         return stringBuffer.toString();
     }
 
     @Override
     public String xPath() {
-        return createJsonPathString();
+        return createXPathString();
     }
 
     @Override
@@ -211,8 +242,7 @@ class XmlAsserter implements XmlVerifiable {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         XmlAsserter that = (XmlAsserter) o;
-        if (xPathBuffer != null ? !xPathBuffer.equals(that.xPathBuffer) : that.xPathBuffer
-                != null)
+        if (!xPathBuffer.equals(that.xPathBuffer))
             return false;
         return fieldName != null ? fieldName.equals(that.fieldName) : that.fieldName == null;
 
@@ -220,7 +250,7 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public int hashCode() {
-        int result = xPathBuffer != null ? xPathBuffer.hashCode() : 0;
+        int result = xPathBuffer.hashCode();
         result = 31 * result + (fieldName != null ? fieldName.hashCode() : 0);
         return result;
     }
@@ -241,32 +271,54 @@ class XmlAsserter implements XmlVerifiable {
         return false;
     }
 
-    protected static String stringWithEscapedSingleQuotes(Object object) {
-        String stringValue = object.toString();
-        return stringValue.replaceAll("'", "\\\\'");
+    protected static String escapeTextForXPath(Object object) {
+        String string = String.valueOf(object);
+        if (!string.contains("'")) {
+            return wrapValueWithSingleQuotes(string);
+        }
+        String[] split = string.split("'");
+        LinkedList<String> list = new LinkedList<String>();
+        list.add("concat(");
+        for (String splitString : split) {
+            list.add("'" + splitString + "'");
+            list.add(",");
+            list.add("\"'\"");
+            list.add(",");
+        }
+        // will remove the last ,', entries
+        // removing last colon
+        list.removeLast();
+        // removing last escaped apostrophe
+        list.removeLast();
+        // removing last colon
+        list.removeLast();
+        list.add(")");
+        return buildStringFromList(list);
     }
 
-    protected static String stringWithEscapedSingleQuotesForRegex(Object object) {
-        return stringWithEscapedSingleQuotes(object).replace("/", "\\/");
+    private static String buildStringFromList(List<String> list) {
+        StringBuilder builder = new StringBuilder();
+        for (String string : list) {
+            builder.append(string);
+        }
+        return builder.toString();
     }
 
-    protected String wrapValueWithSingleQuotes(Object value) {
+    protected static String wrapValueWithSingleQuotes(Object value) {
         return value instanceof String ?
-                "'" + stringWithEscapedSingleQuotes(value) + "'" :
+                "'" + value + "'" :
                 value.toString();
     }
 
     @Override
-    @SuppressWarnings("unchecked")
-    public <T> T read(Class<T> clazz) {
-        Object readObject = parsedXml.read(xPath());
-        if (readObject instanceof JSONArray) {
-            JSONArray array = parsedXml.read(xPath());
-            if (array.size() == 1) {
-                return (T) array.get(0);
-            }
-            return (T) array;
+    public String read() {
+        String xpath = xPath();
+        XPathExpression expr = xPathExpression(xpath);
+        try {
+            return expr.evaluate(cachedObjects.document);
+        } catch (XPathExpressionException e) {
+            throw new RuntimeException("Exception occurred while trying to evaluate " +
+                    "XPath [" + xPath() + "] from XML [" + cachedObjects.xmlAsString + "]", e);
         }
-        return (T) readObject;
     }
 }

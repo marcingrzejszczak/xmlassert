@@ -15,7 +15,7 @@ import com.jayway.jsonpath.DocumentContext;
  *
  * @author Marcin Grzejszczak
  *
- * @since 0.2.0
+ * @since 0.0.1
  */
 public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
 

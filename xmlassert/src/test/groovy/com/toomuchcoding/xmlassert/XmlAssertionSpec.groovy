@@ -10,6 +10,7 @@ import spock.lang.Unroll
 import static XmlAssertion.assertThat
 import static XmlAssertion.assertThatXml
 import static groovy.json.JsonOutput.toJson
+
 /**
  * @author Marcin Grzejszczak
  *
@@ -51,7 +52,7 @@ public class XmlAssertionSpec extends Specification {
     @Shared String xml1 = '''<?xml version="1.0" encoding="UTF-8" ?>
     <some>
         <nested>
-            <json>with &quot;val'ue</json>
+            <json>with &quot;val&apos;ue</json>
             <anothervalue>4</anothervalue>
             <withlist>
                 <name>name1</name>
@@ -59,22 +60,26 @@ public class XmlAssertionSpec extends Specification {
             <withlist>
                 <name>name2</name>
             </withlist>
+            <withlist>
+                8
+            </withlist>
         </nested>
     </some>'''
 
     @Unroll
-    def 'should convert a json with a map as root to a map of path to value '() {
+    def 'should convert an xml with a map as root to a map of path to value '() {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
             verifiable                                                                                         || expectedJsonPath
-            assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                     || '''$.some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml1).node("some").node("nested").node("anothervalue")                                  || '''$.some.nested.anothervalue'''
-            assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                  || '''$.some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1") || '''$.some.nested.withlist[*][?(@.name == 'name1')]'''
-            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2") || '''$.some.nested.withlist[*][?(@.name == 'name2')]'''
-            assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")               || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
-            assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                         || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
+            assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                     || '''/some/nested[anothervalue=4]'''
+            assertThat(xml1).node("some").node("nested").node("anothervalue")                                  || '''/some/nested/anothervalue'''
+            assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                  || '''/some/nested[anothervalue=4]'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1") || '''/some/nested/withlist[name='name1']'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2") || '''/some/nested/withlist[name='name2']'''
+            assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                        || '''/some/nested/withlist[text()=8]'''
+            assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")               || '''/some/nested[json=concat('with "val',"'",'ue')]'''
+            assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                         || '''/some/nested[json=concat('with "val',"'",'ue')]'''
     }
 
     @Shared String xml2 =  '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -268,7 +273,7 @@ public class XmlAssertionSpec extends Specification {
     }
 
     @Unroll
-    def 'should convert a json with list as root to a map of path to value'() {
+    def 'should convert an xml with list as root to a map of path to value'() {
         expect:
             assertThat(xml).array().node("some").node("nested").node("json").isEqualTo("with value").xPath() == '''$[*].some.nested[?(@.json == 'with value')]'''
             assertThat(xml).array().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath() == '''$[*].some.nested[?(@.anothervalue == 4)]'''
@@ -508,8 +513,8 @@ public class XmlAssertionSpec extends Specification {
 
         '''
         expect:
-            XPath.builder(xml).array().node("some").node("nested").node("json").read(String) == 'with value'
-            XPath.builder(xml).array().node("some").node("nested").node("anothervalue").read(Integer) == 4
+            XPathBuilder.builder(xml).array().node("some").node("nested").node("json").read(String) == 'with value'
+            XPathBuilder.builder(xml).array().node("some").node("nested").node("anothervalue").read(Integer) == 4
             assertThat(xml).array().node("some").node("nested").array("withlist").node("name").read(List) == ['name1', 'name2']
             assertThat(xml).array().node("someother").node("nested").array("withlist2").read(List) == ['a', 'b']
             assertThat(xml).array().node("someother").node("nested").node("json").read(Boolean) == true

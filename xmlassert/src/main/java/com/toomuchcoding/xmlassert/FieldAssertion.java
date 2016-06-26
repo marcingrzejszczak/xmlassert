@@ -1,14 +1,14 @@
 package com.toomuchcoding.xmlassert;
 
-import com.jayway.jsonpath.DocumentContext;
-
 import java.util.LinkedList;
 
-import org.w3c.dom.Document;
-
 class FieldAssertion extends XmlAsserter {
-    protected FieldAssertion(Document parsedJson, LinkedList<String> jsonPathBuffer,
+    protected FieldAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
                              Object value, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(parsedJson, jsonPathBuffer, value, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, value, xmlAsserterConfiguration);
+    }
+
+    protected FieldAssertion(XmlAsserter asserter) {
+        super(asserter);
     }
 }

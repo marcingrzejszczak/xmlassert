@@ -11,13 +11,13 @@ class XPathSpec extends Specification {
         expect:
             jsonPath == expectedJsonPath
         where:
-            jsonPath                                                                                                  || expectedJsonPath
-            XPath.builder().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath()                     || '''$.some.nested[?(@.anothervalue == 4)]'''
-            XPath.builder().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath()                     || '''$.some.nested[?(@.anothervalue == 4)]'''
-            XPath.builder().node("some").node("nested").array("withlist").contains("name").isEqualTo("name1").xPath() || '''$.some.nested.withlist[*][?(@.name == 'name1')]'''
-            XPath.builder().node("some").node("nested").array("withlist").contains("name").isEqualTo("name2").xPath() || '''$.some.nested.withlist[*][?(@.name == 'name2')]'''
-            XPath.builder().node("some").node("nested").node("json").isEqualTo("with \"val'ue").xPath()               || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
-            XPath.builder().node("some", "nested", "json").isEqualTo("with \"val'ue").xPath()                         || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
+            jsonPath                                                                                                         || expectedJsonPath
+            XPathBuilder.builder().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath()                     || '''$.some.nested[?(@.anothervalue == 4)]'''
+            XPathBuilder.builder().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath()                     || '''$.some.nested[?(@.anothervalue == 4)]'''
+            XPathBuilder.builder().node("some").node("nested").array("withlist").contains("name").isEqualTo("name1").xPath() || '''$.some.nested.withlist[*][?(@.name == 'name1')]'''
+            XPathBuilder.builder().node("some").node("nested").array("withlist").contains("name").isEqualTo("name2").xPath() || '''$.some.nested.withlist[*][?(@.name == 'name2')]'''
+            XPathBuilder.builder().node("some").node("nested").node("json").isEqualTo("with \"val'ue").xPath()               || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
+            XPathBuilder.builder().node("some", "nested", "json").isEqualTo("with \"val'ue").xPath()                         || '''$.some.nested[?(@.json == 'with "val\\'ue')]'''
     }
 
 }

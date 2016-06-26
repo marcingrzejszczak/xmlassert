@@ -1,47 +1,51 @@
 package com.toomuchcoding.xmlassert;
 
+import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.xpath.XPathFactory;
 import java.io.StringReader;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
-
 /**
  * Entry point for assertions. Use the static factory method and you're ready to go!
  *
  * @author Marcin Grzejszczak
+ *
  * @since 0.0.1
  *
  * @see XmlVerifiable
  */
 public class XmlAssertion {
-    private final Document parsedXml;
+    private final XmlCachedObjects cachedObjects;
     private final LinkedList<String> xPathBuffer = new LinkedList<String>();
     private final XmlAsserterConfiguration xmlAsserterConfiguration = new XmlAsserterConfiguration();
-    private static final Map<String, Document> CACHE = new ConcurrentHashMap<String, Document>();
+    private static final Map<String, XmlCachedObjects> CACHE = new ConcurrentHashMap<String, XmlCachedObjects>();
 
     private XmlAssertion(Document parsedXml) {
-        this.parsedXml = parsedXml;
+        XPathFactory xPathfactory = XPathFactory.newInstance();
+        this.cachedObjects = new XmlCachedObjects(parsedXml, xPathfactory);
     }
 
-    private XmlAssertion(String body) {
-        Document document = CACHE.get(body);
-        if (document == null && !empty(body)) {
+    private XmlAssertion(String xml) {
+        XmlCachedObjects cachedObjects = CACHE.get(xml);
+        if (cachedObjects == null && !empty(xml)) {
             try {
                 DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
                 DocumentBuilder builder = factory.newDocumentBuilder();
-                InputSource inputXml = new InputSource(new StringReader(body));
-                document = builder.parse(inputXml);
+                InputSource inputXml = new InputSource(new StringReader(xml));
+                Document document = builder.parse(inputXml);
+                cachedObjects = new XmlCachedObjects(document, XPathFactory.newInstance(), xml);
             } catch (Exception e) {
               throw new IllegalStateException("Exception occurred while trying to parse the XML", e);  
             }
-            CACHE.put(body, document);
+            CACHE.put(xml, cachedObjects);
         }
-        this.parsedXml = document;
+        this.cachedObjects = cachedObjects;
     }
 
     private boolean empty(String text) {
@@ -49,14 +53,14 @@ public class XmlAssertion {
     }
 
     /**
-     * Starts assertions for the XML provided as {@code String}
+     * Starts assertions for the XML provided as {@link String}
      */
-    public static XmlVerifiable assertThat(String body) {
-        return new XmlAssertion(body).root();
+    public static XmlVerifiable assertThat(String xml) {
+        return new XmlAssertion(xml).root();
     }
 
     /**
-     * Starts assertions for the XML provided as {@code Document}
+     * Starts assertions for the XML provided as {@link Document}
      */
     public static XmlVerifiable assertThat(Document parsedXml) {
         return new XmlAssertion(parsedXml).root();
@@ -81,7 +85,7 @@ public class XmlAssertion {
     }
 
     private XmlVerifiable root() {
-        return new XmlAsserter(parsedXml, xPathBuffer, "/", xmlAsserterConfiguration);
+        return new FieldAssertion(cachedObjects, xPathBuffer, "", xmlAsserterConfiguration).node("");
     }
 
 }

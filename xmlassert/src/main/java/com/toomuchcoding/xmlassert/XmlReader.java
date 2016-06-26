@@ -12,5 +12,5 @@ public interface XmlReader {
 	/**
 	 * Returns the value from the XML, based on the created XPath.
 	 */
-	<T> T read(Class<T> clazz);
+	String read();
 }

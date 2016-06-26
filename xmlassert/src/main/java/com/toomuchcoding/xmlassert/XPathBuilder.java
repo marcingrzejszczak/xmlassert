@@ -9,7 +9,7 @@ package com.toomuchcoding.xmlassert;
  * @see XmlVerifiable
  * @see XmlAssertion
  */
-public class XPath {
+public class XPathBuilder {
 
     /**
      * Returns a builder of {@link XmlVerifiable} with which you can build your
