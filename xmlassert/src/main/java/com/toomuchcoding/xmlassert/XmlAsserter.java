@@ -1,10 +1,12 @@
 package com.toomuchcoding.xmlassert;
 
+import org.eclipse.wst.xml.xpath2.api.ResultSequence;
+import org.eclipse.wst.xml.xpath2.api.XPath2Expression;
+import org.eclipse.wst.xml.xpath2.processor.Engine;
+import org.eclipse.wst.xml.xpath2.processor.util.DynamicContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.w3c.dom.NodeList;
 
-import javax.xml.xpath.XPath;
 import javax.xml.xpath.XPathConstants;
 import javax.xml.xpath.XPathExpression;
 import javax.xml.xpath.XPathExpressionException;
@@ -162,9 +164,9 @@ class XmlAsserter implements XmlVerifiable {
         }
         ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.removeLast();
+        removeLastFieldElement(readyToCheck);
         readyToCheck.xPathBuffer.offer("[matches(" + fieldName + ", " +
-                wrapValueWithSingleQuotes(escapeTextForXPath(value)) + ")]");
+                escapeTextForXPath(value) + ")]");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -191,13 +193,8 @@ class XmlAsserter implements XmlVerifiable {
         }
         boolean xpathMatched;
         try {
-            XPathExpression expr = xPathExpression(xPathString);
-            if(isXPathWithBooleanMethod(xPathString)) {
-                xpathMatched = elementIsNull(expr);
-            } else {
-                NodeList nl = (NodeList) expr.evaluate(cachedObjects.document, XPathConstants.NODESET);
-                xpathMatched = nl.getLength() > 0;
-            }
+            ResultSequence expr = xPathExpression(xPathString);
+            xpathMatched = !expr.empty();
         } catch (Exception e) {
            log.error("Exception occurred while trying to match XPath <{}>", xPathString, e);
            throw new RuntimeException(e);
@@ -215,13 +212,13 @@ class XmlAsserter implements XmlVerifiable {
         return xPathString.contains("boolean(") && xPathString.contains("text()[1]");
     }
 
-    private XPathExpression xPathExpression(String xPathString) {
-        XPath xpath = cachedObjects.factory.newXPath();
+    private ResultSequence xPathExpression(String xPathString) {
         try {
-            return xpath.compile(xPathString);
-        } catch (XPathExpressionException e) {
-            throw new RuntimeException("For XPath <" + xPathString + "> " +
-                    "XPath compile exception occurred", e);
+            XPath2Expression expr = new Engine().parseExpression(xPathString, cachedObjects.xpathBuilder);
+            return expr.evaluate(new DynamicContextBuilder(cachedObjects.xpathBuilder),
+                    new Object[] { cachedObjects.document });
+        } catch (Exception e) {
+            throw new XmlAsserterXpathException(xPath(), cachedObjects.xmlAsString, e);
         }
     }
 
@@ -328,16 +325,25 @@ class XmlAsserter implements XmlVerifiable {
     @Override
     public String read() {
         String xpath = xPath();
-        XPathExpression expr = xPathExpression(xpath);
-        try {
-            return expr.evaluate(cachedObjects.document);
-        } catch (XPathExpressionException e) {
-            throw new RuntimeException("Exception occurred while trying to evaluate " +
-                    "XPath [" + xPath() + "] from XML [" + cachedObjects.xmlAsString + "]", e);
+        ResultSequence expr = xPathExpression(xpath);
+        if (expr.empty()) {
+            throw new XmlAsserterXpathException(xPath(), cachedObjects.xmlAsString);
         }
+        return String.valueOf(expr.value(0));
     }
 
     protected boolean isReadyToCheck() {
         return false;
+    }
+
+    private static class XmlAsserterXpathException extends RuntimeException {
+        XmlAsserterXpathException(String xPath, String xmlAsString) {
+            super("Exception occurred while trying to evaluate " +
+                    "XPath [" + xPath + "] from XML [" + xmlAsString + "]");
+        }
+        XmlAsserterXpathException(String xPath, String xmlAsString, Exception e) {
+            super("Exception occurred while trying to evaluate " +
+                    "XPath [" + xPath + "] from XML [" + xmlAsString + "]", e);
+        }
     }
 }

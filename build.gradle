@@ -43,7 +43,10 @@ subprojects {
     sourceCompatibility = 1.7
 
     dependencies {
+        //TODO: Remove
         compile "com.jayway.jsonpath:json-path:2.2.0"
+        compile 'com.rackspace.eclipse.webtools.sourceediting:org.eclipse.wst.xml.xpath2.processor:2.1.100'
+        compile 'xerces:xercesImpl:2.11.0'
 
         testCompile "org.codehaus.groovy:groovy-all:2.4.5"
         testCompile "org.spockframework:spock-core:1.0-groovy-2.4"

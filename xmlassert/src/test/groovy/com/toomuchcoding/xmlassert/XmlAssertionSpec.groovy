@@ -2,6 +2,7 @@ package com.toomuchcoding.xmlassert
 
 import com.jayway.jsonpath.DocumentContext
 import com.jayway.jsonpath.JsonPath
+import groovy.xml.MarkupBuilder
 import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
@@ -11,42 +12,7 @@ import static XmlAssertion.assertThat
 import static XmlAssertion.assertThatXml
 import static groovy.json.JsonOutput.toJson
 
-/**
- * @author Marcin Grzejszczak
- *
- *
 
- <root>
- <list>
- <a>A</a>
- <list2>
- <primitive>A</primitive>
- <primitive>4</primitive>
- <element>
- <name>B</name>
- <value>1</value>
- <anotherlist>
- <simple>A</simple>
- <simple>B</simple>
- </anotherlist>
- </element>
- <element>
- <name>C</name>
- <value>10</value>
- </element>
- </list2>
- </list>
- </root>
-
- Primitive: /root/list/list2/primitive[text()='D']
- Primitive number: /root/list/list2/primitive[text()=4]
- Complex: /root/list/list2/element[name='B']
- More Complex: /root/list/list2/element[name='B']/anotherlist/simple[text()='B']
-
-
-
- *
- */
 public class XmlAssertionSpec extends Specification {
 
     @Shared String xml1 = '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -84,7 +50,7 @@ public class XmlAssertionSpec extends Specification {
             assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1")                                                                || '''/some/nested/withlist[name='name1']'''
             assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2")                                                                || '''/some/nested/withlist[name='name2']'''
             assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name3").withAttribute("id", "10").withAttribute("surname", "kowalski") || '''/some/nested/withlist[name='name3']/name[@id='10'][@surname='kowalski']'''
-            assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                                                                                       || '''/some/nested/withlist[text()=8]'''
+            assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                                                                                       || '''/some/nested/withlist[number()=8]'''
             assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")                                                                              || '''/some/nested[json=concat('with "val',"'",'ue')]'''
             assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                                                                                        || '''/some/nested[json=concat('with "val',"'",'ue')]'''
     }
@@ -127,13 +93,14 @@ public class XmlAssertionSpec extends Specification {
             assertThat(xml3).node("root").node("property4").isEqualTo(5)      || '''/root[property4=5]'''
     }
 
-    @Shared Map xml4 =  [
-            property1: 'a',
-            property2: [
-                    [a: 'sth'],
-                    [b: 'sthElse']
-            ]
-    ]
+    @Shared StringWriter xml4 = new StringWriter()
+    @Shared def root4 = new MarkupBuilder(xml4).root {
+        property1('a')
+        property2 {
+            a('sth')
+            b('sthElse')
+        }
+    }
 
     @Unroll
     def "should generate assertions for simple response body constructed from map with a list"() {
@@ -141,54 +108,20 @@ public class XmlAssertionSpec extends Specification {
             verifiable.xPath() == expectedJsonPath
         where:
             verifiable                                                                     || expectedJsonPath
-            assertThat(toJson(xml4)).node("property1").isEqualTo("a")                      || '''$[?(@.property1 == 'a')]'''
-            assertThat(toJson(xml4)).array("property2").contains("a").isEqualTo("sth")     || '''$.property2[*][?(@.a == 'sth')]'''
-            assertThat(toJson(xml4)).array("property2").contains("b").isEqualTo("sthElse") || '''$.property2[*][?(@.b == 'sthElse')]'''
-    }
-
-    @Shared Map xml5 =  [
-            property: [
-                    14: 0.0,
-                    7 : 0.0
-            ]
-    ]
-
-    @Unroll
-    def "should generate assertions for a response body containing map with integers as keys"() {
-        expect:
-            verifiable.xPath() == expectedJsonPath
-        where:
-            verifiable                                                        || expectedJsonPath
-            assertThat(toJson(xml5)).node("property").node(7).isEqualTo(0.0)  || '''$.property[?(@.7 == 0.0)]'''
-            assertThat(toJson(xml5)).node("property").node(14).isEqualTo(0.0) || '''$.property[?(@.14 == 0.0)]'''
-    }
-
-    @Shared String xml6 =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>
-        <property1>a</property1>
-    </0>
-    <1>
-        <property2>b</property2>
-    </1>
-'''
-
-    @Unroll
-    def "should generate assertions for array in response body"() {
-        expect:
-            verifiable.xPath() == expectedJsonPath
-        where:
-            verifiable                                                    || expectedJsonPath
-            assertThat(xml6).array().contains("property1").isEqualTo("a") || '''$[*][?(@.property1 == 'a')]'''
-            assertThat(xml6).array().contains("property2").isEqualTo("b") || '''$[*][?(@.property2 == 'b')]'''
+            assertThat(xml4.toString()).node("root").node("property1").isEqualTo("a")                      || '''/root[property1='a']'''
+            assertThat(xml4.toString()).node("root").array("property2").contains("a").isEqualTo("sth")     || '''/root/property2[a='sth']'''
+            assertThat(xml4.toString()).node("root").array("property2").contains("b").isEqualTo("sthElse") || '''/root/property2[b='sthElse']'''
     }
 
     @Shared String xml7 =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>
-        <property2>test1</property2>
-    </property1>
-    <property1>
-        <property3>test2</property3>
-    </property1>
+    <root>
+        <property1>
+            <property2>test1</property2>
+        </property1>
+        <property1>
+            <property3>test2</property3>
+        </property1>
+    </root>
 '''
 
     @Unroll
@@ -197,39 +130,42 @@ public class XmlAssertionSpec extends Specification {
             verifiable.xPath() == expectedJsonPath
         where:
             verifiable                                                                   || expectedJsonPath
-            assertThat(xml7).array("property1").contains("property2").isEqualTo("test1") || '''$.property1[*][?(@.property2 == 'test1')]'''
-            assertThat(xml7).array("property1").contains("property3").isEqualTo("test2") || '''$.property1[*][?(@.property3 == 'test2')]'''
+            assertThat(xml7).node("root").array("property1").contains("property2").isEqualTo("test1") || '''/root/property1[property2='test1']'''
+            assertThat(xml7).node("root").array("property1").contains("property3").isEqualTo("test2") || '''/root/property1[property3='test2']'''
     }
 
     @Shared String xml8 =  """<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>a</property1>
-    <property2>
-        <property3>b</property3>
-    </property2>
+    <root>
+        <property1>a</property1>
+        <property2>
+            <property3>b</property3>
+        </property2>
+    </root>
 """
 
     def "should generate assertions for nested objects in response body"() {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                          || expectedJsonPath
-            assertThat(xml8).node("property2").node("property3").isEqualTo("b") || '''$.property2[?(@.property3 == 'b')]'''
-            assertThat(xml8).node("property1").isEqualTo("a")                   || '''$[?(@.property1 == 'a')]'''
+            verifiable                                                                       || expectedJsonPath
+            assertThat(xml8).node("root").node("property2").node("property3").isEqualTo("b") || '''/root/property2[property3='b']'''
+            assertThat(xml8).node("root").node("property1").isEqualTo("a")                   || '''/root[property1='a']'''
     }
 
-    @Shared Map xml9 =  [
-            property1: "a",
-            property2: 123
-    ]
+    @Shared StringWriter xml9 = new StringWriter()
+    @Shared def root9 = new MarkupBuilder(xml9).root {
+        property1('a')
+        property2(123)
+    }
 
     @Unroll
     def "should generate regex assertions for map objects in response body"() {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                     || expectedJsonPath
-            assertThat(toJson(xml9)).node("property2").matches("[0-9]{3}") || '''$[?(@.property2 =~ /[0-9]{3}/)]'''
-            assertThat(toJson(xml9)).node("property1").isEqualTo("a")      || '''$[?(@.property1 == 'a')]'''
+            verifiable                                                                     || expectedJsonPath
+            assertThat(xml9.toString()).node("root").node("property2").matches("[0-9]{3}") || '''/root[matches(property2, '[0-9]{3}')]'''
+            assertThat(xml9.toString()).node("root").node("property1").isEqualTo("a")      || '''/root[property1='a']'''
     }
 
     def "should generate escaped regex assertions for string objects in response body"() {

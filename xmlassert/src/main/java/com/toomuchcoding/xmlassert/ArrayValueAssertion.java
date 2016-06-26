@@ -66,7 +66,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        return equalityOnAPrimitive("[text()=" + String.valueOf(value) + "]");
+        return equalityOnAPrimitive("[number()=" + String.valueOf(value) + "]");
     }
 
     private XmlVerifiable equalityOnAPrimitive(String xPath) {

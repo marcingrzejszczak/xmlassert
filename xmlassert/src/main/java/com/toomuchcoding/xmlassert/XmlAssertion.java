@@ -1,12 +1,12 @@
 package com.toomuchcoding.xmlassert;
 
+import org.eclipse.wst.xml.xpath2.processor.DOMLoader;
+import org.eclipse.wst.xml.xpath2.processor.XercesLoader;
 import org.w3c.dom.Document;
-import org.xml.sax.InputSource;
 
-import javax.xml.parsers.DocumentBuilder;
-import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.xpath.XPathFactory;
-import java.io.StringReader;
+import java.io.ByteArrayInputStream;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -27,19 +27,17 @@ public class XmlAssertion {
     private static final Map<String, XmlCachedObjects> CACHE = new ConcurrentHashMap<String, XmlCachedObjects>();
 
     private XmlAssertion(Document parsedXml) {
-        XPathFactory xPathfactory = XPathFactory.newInstance();
-        this.cachedObjects = new XmlCachedObjects(parsedXml, xPathfactory);
+        this.cachedObjects = new XmlCachedObjects(parsedXml);
     }
 
     private XmlAssertion(String xml) {
         XmlCachedObjects cachedObjects = CACHE.get(xml);
         if (cachedObjects == null && !empty(xml)) {
             try {
-                DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-                DocumentBuilder builder = factory.newDocumentBuilder();
-                InputSource inputXml = new InputSource(new StringReader(xml));
-                Document document = builder.parse(inputXml);
-                cachedObjects = new XmlCachedObjects(document, XPathFactory.newInstance(), xml);
+                InputStream inputXml = new ByteArrayInputStream(xml.getBytes(StandardCharsets.UTF_8));
+                DOMLoader loader = new XercesLoader();
+                Document document = loader.load(inputXml);
+                cachedObjects = new XmlCachedObjects(document, xml);
             } catch (Exception e) {
               throw new IllegalStateException("Exception occurred while trying to parse the XML", e);  
             }
