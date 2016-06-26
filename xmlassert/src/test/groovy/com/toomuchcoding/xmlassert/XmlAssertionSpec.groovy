@@ -90,8 +90,10 @@ public class XmlAssertionSpec extends Specification {
     }
 
     @Shared String xml2 =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>a</property1>
-    <property2>b</property2>
+    <root>
+        <property1>a</property1>
+        <property2>b</property2>
+    </root>
 '''
 
     @Unroll
@@ -99,15 +101,18 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                        || expectedJsonPath
-            assertThat(xml2).node("property1").isEqualTo("a") || '''$[?(@.property1 == 'a')]'''
-            assertThat(xml2).node("property2").isEqualTo("b") || '''$[?(@.property2 == 'b')]'''
+            verifiable                                                     || expectedJsonPath
+            assertThat(xml2).node("root").node("property1").isEqualTo("a") || '''/root[property1='a']'''
+            assertThat(xml2).node("root").node("property2").isEqualTo("b") || '''/root[property2='b']'''
     }
 
     @Shared String xml3 =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>true</property1>
-    <property2 />
-    <property3>false</property3>
+    <root>
+        <property1>true</property1>
+        <property2 />
+        <property3>false</property3>
+        <property4>5</property4>
+    </root>
 '''
 
     @Unroll
@@ -115,10 +120,11 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                           || expectedJsonPath
-            assertThat(xml3).node("property1").isEqualTo("true") || '''$[?(@.property1 == 'true')]'''
-            assertThat(xml3).node("property2").isNull()          || '''$[?(@.property2 == null)]'''
-            assertThat(xml3).node("property3").isEqualTo(false)  || '''$[?(@.property3 == false)]'''
+            verifiable                                                        || expectedJsonPath
+            assertThat(xml3).node("root").node("property1").isEqualTo("true") || '''/root[property1='true']'''
+            assertThat(xml3).node("root").node("property2").isNull()          || '''not(boolean(/root/property2/text()[1]))'''
+            assertThat(xml3).node("root").node("property3").isEqualTo(false)  || '''/root[property3='false']'''
+            assertThat(xml3).node("root").node("property4").isEqualTo(5)      || '''/root[property4=5]'''
     }
 
     @Shared Map xml4 =  [

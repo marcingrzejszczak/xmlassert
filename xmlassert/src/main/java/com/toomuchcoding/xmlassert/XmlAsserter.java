@@ -149,7 +149,7 @@ class XmlAsserter implements XmlVerifiable {
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
         String xpath = createXPathString();
         readyToCheck.xPathBuffer.clear();
-        readyToCheck.xPathBuffer.offer("boolean(" + xpath + "/text()[1])");
+        readyToCheck.xPathBuffer.offer("not(boolean(" + xpath + "/text()[1]))");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -175,7 +175,7 @@ class XmlAsserter implements XmlVerifiable {
         if (value == null) {
             return isNull();
         }
-        return xmlVerifiableFromObject(value);
+        return isEqualTo(String.valueOf(value));
     }
 
     @Override
@@ -189,18 +189,30 @@ class XmlAsserter implements XmlVerifiable {
             log.trace("WARNING!!! Overriding verification of the XPath. Your tests may pass even though they shouldn't");
             return;
         }
-        boolean empty;
+        boolean xpathMatched;
         try {
             XPathExpression expr = xPathExpression(xPathString);
-            NodeList nl = (NodeList) expr.evaluate(cachedObjects.document, XPathConstants.NODESET);
-            empty = nl.getLength() == 0;
+            if(isXPathWithBooleanMethod(xPathString)) {
+                xpathMatched = elementIsNull(expr);
+            } else {
+                NodeList nl = (NodeList) expr.evaluate(cachedObjects.document, XPathConstants.NODESET);
+                xpathMatched = nl.getLength() > 0;
+            }
         } catch (Exception e) {
            log.error("Exception occurred while trying to match XPath <{}>", xPathString, e);
            throw new RuntimeException(e);
         }
-        if (empty) {
+        if (!xpathMatched) {
             throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] doesn't match the XPath <" + xPathString + ">");
         }
+    }
+
+    private Boolean elementIsNull(XPathExpression expr) throws XPathExpressionException {
+        return (Boolean) expr.evaluate(cachedObjects.document, XPathConstants.BOOLEAN);
+    }
+
+    private boolean isXPathWithBooleanMethod(String xPathString) {
+        return xPathString.contains("boolean(") && xPathString.contains("text()[1]");
     }
 
     private XPathExpression xPathExpression(String xPathString) {

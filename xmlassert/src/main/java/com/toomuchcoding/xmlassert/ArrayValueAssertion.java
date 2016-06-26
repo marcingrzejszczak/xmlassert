@@ -93,11 +93,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
-                xPathBuffer, fieldName, xmlAsserterConfiguration);
-        readyToCheck.xPathBuffer.offer("[text()=" + String.valueOf(value) + "]");
-        readyToCheck.checkBufferedXPathString();
-        return readyToCheck;
+        return isEqualTo(String.valueOf(value));
     }
 
     @Override
