@@ -1,0 +1,297 @@
+:lib_version: 0.0.1
+
+image::https://travis-ci.org/marcingrzejszczak/xmlassert.svg?branch=master[Build Status, link=https://travis-ci.org/marcingrzejszczak/xmlassert]
+image::https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert/badge.svg?style=plastic[Maven Central, link="https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert"]
+image::https://badges.gitter.im/Join%20Chat.svg[Gitter, link="https://gitter.im/marcingrzejszczak/xmlassert?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+
+= JSON Assert
+
+Small library for those who have a hard time understanding the complexity of JSON Path.
+
+:toc:
+:toc-placement!:
+
+toc::[]
+
+
+= Rationale
+
+Have you ever met such a JSON Path expression?
+
+[source]
+----
+$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]
+----
+
+Pretty isn't it? Wouldn't it be better to just read:
+
+[source,java]
+----
+assertThat(jsonAsString).array().field("place").field("bounding_box").array("coordinates").array().contains(38.791645).value()
+----
+
+JSON Assert to the rescue!
+
+== Fast intro
+
+=== Assertions
+
+The library has a couple of main classes. One is `xmlassertion` that gives you public static methods:
+
+[source,java]
+----
+public static JsonVerifiable assertThat(String body)
+----
+
+NOTE! The aforementioned version caches the `DocumentContext` for the provided JSON.
+
+and
+
+[source,java]
+----
+public static JsonVerifiable assertThat(DocumentContext parsedJson)
+----
+
+Both these methods give return the public `JsonVerifiable` interface which is a fluent interface with which you can build your
+JSON path expression. Please check the Javadocs of that file for more information.
+
+=== Building JSON Paths
+
+As you could see it's not that easy to build a JSON Path. With JSON Assert you can use the `JsonPath` class to finally
+build the JSON Paths yourself! This is the contract for the `JsonPath` class:
+
+[source,java]
+----
+/**
+ * Returns a builder of {@link JsonVerifiable} with which you can build your
+ * JSON Path. Once finished just call {@link JsonVerifiable#jsonPath()} to get
+ * JSON Path as String.
+ */
+public static JsonVerifiable builder()
+----
+
+and when you call:
+
+[source,java]
+----
+JsonPath.builder().field("some").field("nested").array("withlist").contains("name").isEqualTo("name1").jsonPath();
+----
+
+you will receive `$.some.nested.withlist[*][?(@.name == 'name1')]` String.
+
+=== Retrieving JSON Path value (since 0.4.0)
+
+Wouldn't it be great to retrieve the value from the JSON via the JSON Path? There you go!
+
+[source,groovy]
+----
+given:
+    String json = ''' [ {
+                            "some" : {
+                                "nested" : {
+                                    "json" : "with value",
+                                    "anothervalue": 4,
+                                    "withlist" : [
+                                        { "name" :"name1"} ,
+                                        {"name": "name2"},
+                                        {"anothernested": { "name": "name3"} }
+                                    ]
+                                }
+                            }
+                        },
+                        {
+                            "someother" : {
+                                "nested" : {
+                                    "json" : true,
+                                    "anothervalue": 4,
+                                    "withlist" : [
+                                        { "name" :"name1"} , {"name": "name2"}
+                                    ],
+                                    "withlist2" : [
+                                        "a", "b"
+                                    ]
+                                }
+                            }
+                        }
+                    ]
+'''
+    expect:
+        com.toomuchcoding.xmlassert.JsonPath.builder(json).array().field("some").field("nested").field("json").read(String) == 'with value'
+        com.toomuchcoding.xmlassert.JsonPath.builder(json).array().field("some").field("nested").field("anothervalue").read(Integer) == 4
+        assertThat(json).array().field("some").field("nested").array("withlist").field("name").read(List) == ['name1', 'name2']
+        assertThat(json).array().field("someother").field("nested").array("withlist2").read(List) == ['a', 'b']
+        assertThat(json).array().field("someother").field("nested").field("json").read(Boolean) == true
+----
+
+All thanks to the `JsonReader` interface:
+
+[source,java]
+----
+/**
+ * Returns the value from the JSON, based on the created JSON Path. If the result is an
+ * JSON Array and has a single value then that value is returned. If that's an array with
+ * greater number of results then that array is returned.
+ */
+<T> T read(Class<T> clazz);
+----
+
+== How to add it
+
+Just add it as your dependency (Example for Gradle)
+
+[source,groovy,subs="attributes,verbatim"]
+----
+testCompile 'com.toomuchcoding.xmlassert:xmlassert:{lib_version}'
+----
+
+== Dependencies
+
+JSON Assert is really lightweight. It has only one dependency
+
+[source,groovy]
+----
+compile "com.jayway.jsonpath:json-path:2.2.0"
+----
+
+== Examples
+
+=== Example 1
+
+For the JSON
+
+[source,json]
+----
+ {
+        "some" : {
+            "nested" : {
+                "json" : "with \"val'ue",
+                "anothervalue": 4,
+                "withlist" : [
+                    { "name" :"name1"} ,
+                    {"name": "name2"}
+                ]
+            }
+        }
+    }
+----
+
+The following is true
+
+JSON Assert expressions:
+
+[source,java]
+----
+xmlassertion.assertThat(json).field("some").field("nested").field("anothervalue").isEqualTo(4)
+xmlassertion.assertThat(json).field("some").field("nested").array("withlist").contains("name").isEqualTo("name1")
+xmlassertion.assertThat(json).field("some").field("nested").array("withlist").contains("name").isEqualTo("name2")
+xmlassertion.assertThat(json).field("some").field("nested").field("json").isEqualTo("with \"val'ue")
+----
+
+Respective JSON Path expressions:
+
+[source]
+----
+$.some.nested[?(@.anothervalue == 4)]
+$.some.nested.withlist[*][?(@.name == 'name1')]
+$.some.nested.withlist[*][?(@.name == 'name2')]
+$.some.nested[?(@.json == 'with "val\\'ue')]
+----
+
+=== Example 2
+
+For the JSON
+
+[source,json]
+----
+ [{
+    "place":
+    {
+        "bounding_box":
+        {
+            "coordinates":
+                [[
+                    [-77.119759,38.995548],
+                    [-76.909393,38.791645]
+                ]]
+        }
+    }
+}]
+----
+
+The following is true
+
+JSON Assert expressions:
+
+[source,java]
+----
+xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.995548).value()
+xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-77.119759).value()
+xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-76.909393).value()
+xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.791645).value()
+----
+
+Respective JSON Path expressions:
+
+[source]
+----
+$[*].place.bounding_box.coordinates[*][*][?(@ == 38.995548)]
+$[*].place.bounding_box.coordinates[*][*][?(@ == -77.119759)]
+$[*].place.bounding_box.coordinates[*][*][?(@ == -76.909393)]
+$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]
+----
+
+=== More examples
+
+More examples can be found in the `xmlassertionSpec` in the test sources
+
+= Additional features
+
+== AssertJ integration (since 0.2.0)
+
+There is a possibility to use JSON Assert via AssertJ. Regardless of which version you'll choose
+you have the same class that you can use to start the fluent assertion
+
+The standard version
+
+[source,java]
+----
+com.toomuchcoding.xmlassert.xmlassertions.assertThat(DocumentContext context);
+com.toomuchcoding.xmlassert.xmlassertions.assertThat(JsonVerifiable jsonVerifiable);
+----
+
+or the BDD version
+
+[source,java]
+----
+com.toomuchcoding.xmlassert.BDDxmlassertions.then(DocumentContext context);
+com.toomuchcoding.xmlassert.BDDxmlassertions.then(JsonVerifiable jsonVerifiable);
+----
+
+=== AssertJ 2.x
+
+Just add
+
+[source,groovy,subs="attributes,verbatim"]
+----
+testCompile 'com.toomuchcoding.xmlassert:xmlassert-assertj-java7:{lib_version}'
+----
+
+=== AssertJ 3.x
+
+Just add
+
+[source,groovy,subs="attributes,verbatim"]
+--
+testCompile 'com.toomuchcoding.xmlassert:xmlassert-assertj-java8:{lib_version}'
+--
+
+= Migrations
+
+== From 0.1.x -> 0.2.0
+
+- Convert all project imports from `com.blogspot.toomuchcoding:xmlassert` to `com.toomuchcoding.xmlassert:xmlassert`
+- Convert all code imports from `com.blogspot.toomuchcoding.xmlassert` to `com.toomuchcoding.xmlassert`
+
+= Contact
+
+https://gitter.im/marcingrzejszczak/xmlassert[Gitter chat]
