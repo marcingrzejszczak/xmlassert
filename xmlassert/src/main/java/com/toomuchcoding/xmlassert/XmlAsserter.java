@@ -52,7 +52,10 @@ class XmlAsserter implements XmlVerifiable {
         if (asserter.xPathBuffer.peekLast().equals("/")) {
             asserter.xPathBuffer.removeLast();
         }
-        asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeTextForXPath(attributeValue) + ")");
+        if (isReadyToCheck()) {
+            asserter.xPathBuffer.offer("/" + fieldName);
+        }
+        asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeTextForXPath(attributeValue) + "]");
         updateCurrentBuffer(asserter);
         asserter.checkBufferedXPathString();
         return asserter;
@@ -320,5 +323,9 @@ class XmlAsserter implements XmlVerifiable {
             throw new RuntimeException("Exception occurred while trying to evaluate " +
                     "XPath [" + xPath() + "] from XML [" + cachedObjects.xmlAsString + "]", e);
         }
+    }
+
+    protected boolean isReadyToCheck() {
+        return false;
     }
 }

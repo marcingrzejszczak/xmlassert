@@ -8,4 +8,9 @@ class ReadyToCheckAsserter extends XmlAsserter {
                                 Object fieldName, XmlAsserterConfiguration xmlAsserterConfiguration) {
         super(cachedObjects, jsonPathBuffer, fieldName, xmlAsserterConfiguration);
     }
+
+    @Override
+    protected boolean isReadyToCheck() {
+        return true;
+    }
 }

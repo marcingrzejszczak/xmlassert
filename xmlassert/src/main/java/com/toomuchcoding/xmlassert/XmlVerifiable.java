@@ -16,6 +16,48 @@ public interface XmlVerifiable extends IteratingOverArray, XmlReader {
 
     /**
      * Field assertion. Adds a attribute to the currently checked node.
+     * NOTE: If you want to both check equality and attributes you have to
+     * first check the equality and then attributes. E.g. having such an XML
+     *
+     * <p>
+     *
+     * {@code
+        <?xml version="1.0" encoding="UTF-8" ?>
+        <some>
+            <nested>
+                <json>with &quot;val&apos;ue</json>
+                <anothervalue>4</anothervalue>
+                <withattr id="a" id2="b">foo</withattr>
+                <withlist>
+                    <name>name1</name>
+                </withlist>
+                <withlist>
+                    <name>name2</name>
+                </withlist>
+                <withlist>
+                    8
+                </withlist>
+                <withlist>
+                    <name id="10" surname="kowalski">name3</name>
+                </withlist>
+            </nested>
+        </some>
+     * }
+     *
+     * <p>
+     *
+     * In order to check the values of the attributes of the {@code withlist} element
+     * with value {@code name3} you'd have to call:
+     *
+     * <p>
+     *
+     * {@code assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name3").withAttribute("id", "10").withAttribute("surname", "kowalski")}
+     *
+     * <p>
+     *
+     * The following XPath would be created:
+     {@code /some/nested/withlist[name='name3']/name[@id='10'][@surname='kowalski'] }
+     *
      */
     XmlVerifiable withAttribute(String attribute, String attributeValue);
 
@@ -28,7 +70,7 @@ public interface XmlVerifiable extends IteratingOverArray, XmlReader {
     /**
      * When you want to assert values in a array with a given name, e.g.
      *
-     * </p>
+     * <p>
      *
      * {@code
             <list>
@@ -40,16 +82,16 @@ public interface XmlVerifiable extends IteratingOverArray, XmlReader {
             </list>
      * }
      *
-     * </p>
+     * <p>
      * The code to check it would look like this:
-     * </p>
+     * <p>
      *
      * {@code array("list").contains("element").isEqualTo("foo")}
      * {@code array("list").contains("complexElement").node("param").isEqualTo("baz")}
      *
-     * </p>
+     * <p>
      * The generated XPaths would be
-     * </p>
+     * <p>
      *
      * {@code /list/element[text()='foo']}
      * {@code /list/complexElement[param='baz']}

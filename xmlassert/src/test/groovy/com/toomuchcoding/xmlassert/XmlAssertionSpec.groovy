@@ -54,6 +54,7 @@ public class XmlAssertionSpec extends Specification {
         <nested>
             <json>with &quot;val&apos;ue</json>
             <anothervalue>4</anothervalue>
+            <withattr id="a" id2="b">foo</withattr>
             <withlist>
                 <name>name1</name>
             </withlist>
@@ -63,6 +64,9 @@ public class XmlAssertionSpec extends Specification {
             <withlist>
                 8
             </withlist>
+            <withlist>
+                <name id="10" surname="kowalski">name3</name>
+            </withlist>
         </nested>
     </some>'''
 
@@ -71,15 +75,18 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                                                         || expectedJsonPath
-            assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                     || '''/some/nested[anothervalue=4]'''
-            assertThat(xml1).node("some").node("nested").node("anothervalue")                                  || '''/some/nested/anothervalue'''
-            assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                  || '''/some/nested[anothervalue=4]'''
-            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1") || '''/some/nested/withlist[name='name1']'''
-            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2") || '''/some/nested/withlist[name='name2']'''
-            assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                        || '''/some/nested/withlist[text()=8]'''
-            assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")               || '''/some/nested[json=concat('with "val',"'",'ue')]'''
-            assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                         || '''/some/nested[json=concat('with "val',"'",'ue')]'''
+            verifiable                                                                                                                                                        || expectedJsonPath
+            assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                    || '''/some/nested[anothervalue=4]'''
+            assertThat(xml1).node("some").node("nested").node("anothervalue")                                                                                                 || '''/some/nested/anothervalue'''
+            assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id", "a").withAttribute("id2", "b")                                                  || '''/some/nested/withattr[@id='a'][@id2='b']'''
+            assertThat(xml1).node("some").node("nested").node("withattr").isEqualTo("foo").withAttribute("id", "a").withAttribute("id2", "b")                                 || '''/some/nested[withattr='foo']/withattr[@id='a'][@id2='b']'''
+            assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                 || '''/some/nested[anothervalue=4]'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1")                                                                || '''/some/nested/withlist[name='name1']'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2")                                                                || '''/some/nested/withlist[name='name2']'''
+            assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name3").withAttribute("id", "10").withAttribute("surname", "kowalski") || '''/some/nested/withlist[name='name3']/name[@id='10'][@surname='kowalski']'''
+            assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                                                                                       || '''/some/nested/withlist[text()=8]'''
+            assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")                                                                              || '''/some/nested[json=concat('with "val',"'",'ue')]'''
+            assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                                                                                        || '''/some/nested[json=concat('with "val',"'",'ue')]'''
     }
 
     @Shared String xml2 =  '''<?xml version="1.0" encoding="UTF-8" ?>
