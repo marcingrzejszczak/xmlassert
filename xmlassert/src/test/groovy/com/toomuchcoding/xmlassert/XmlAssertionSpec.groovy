@@ -1,7 +1,5 @@
 package com.toomuchcoding.xmlassert
 
-import com.jayway.jsonpath.DocumentContext
-import com.jayway.jsonpath.JsonPath
 import groovy.xml.MarkupBuilder
 import spock.lang.Issue
 import spock.lang.Shared
@@ -170,33 +168,35 @@ public class XmlAssertionSpec extends Specification {
 
     def "should generate escaped regex assertions for string objects in response body"() {
         given:
-        Map json =  [
-                property2: 123123
-        ]
+        StringWriter xml = new StringWriter()
+        def root = new MarkupBuilder(xml).root {
+            property2(123123)
+        }
         expect:
-            def verifiable = assertThat(toJson(json)).node("property2").matches("\\d+")
-            verifiable.xPath() == '''$[?(@.property2 =~ /\\d+/)]'''
+            def verifiable = assertThat(xml.toString()).node("root").node("property2").matches("\\d+")
+            verifiable.xPath() == '''/root[matches(property2, '\\d+')]'''
     }
 
-    @Shared Map xml10 =  [
-            errors: [
-                    [property: "bank_account_number",
-                     message: "incorrect_format"]
-            ]
-    ]
+    @Shared StringWriter xml10 = new StringWriter()
+    @Shared def root10 = new MarkupBuilder(xml10).root {
+        errors {
+            property('bank_account_number')
+            message('incorrect_format')
+        }
+    }
 
     @Unroll
-    def "should work with more complex stuff and jsonpaths"() {
+    def "should work with more complex stuff and xpaths"() {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                                                      || expectedJsonPath
-            assertThat(toJson(xml10)).array("errors").contains("property").isEqualTo("bank_account_number") || '''$.errors[*][?(@.property == 'bank_account_number')]'''
-            assertThat(toJson(xml10)).array("errors").contains("message").isEqualTo("incorrect_format")     || '''$.errors[*][?(@.message == 'incorrect_format')]'''
+            verifiable                                                                                                      || expectedJsonPath
+            assertThat(xml10.toString()).node("root").array("errors").contains("property").isEqualTo("bank_account_number") || '''/root/errors[property='bank_account_number']'''
+            assertThat(xml10.toString()).node("root").array("errors").contains("message").isEqualTo("incorrect_format")     || '''/root/errors[message='incorrect_format']'''
     }
 
     @Shared String xml11 = '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>
+    <root>
         <place>
             <bounding_box>
                 <coordinates>-77.119759</coordinates>
@@ -205,7 +205,7 @@ public class XmlAssertionSpec extends Specification {
                 <coordinates>38.791645</coordinates>
             </bounding_box>
         </place>
-    </0>
+    </root>
 '''
 
     @Unroll
@@ -213,11 +213,11 @@ public class XmlAssertionSpec extends Specification {
         expect:
             verifiable.xPath() == expectedJsonPath
         where:
-            verifiable                                                                                                                          || expectedJsonPath
-            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(38.995548).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.995548)]'''
-            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(-77.119759).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -77.119759)]'''
-            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(-76.909393).value() || '''$[*].place.bounding_box.coordinates[*][*][?(@ == -76.909393)]'''
-            assertThat(xml11).array().node("place").node("bounding_box").array("coordinates").array().arrayField().contains(38.791645).value()  || '''$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]'''
+            verifiable                                                                                                   || expectedJsonPath
+            assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(38.995548)  || '''/root/place/bounding_box/coordinates[number()=38.995548]'''
+            assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(-77.119759) || '''/root/place/bounding_box/coordinates[number()=-77.119759]'''
+            assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(-76.909393) || '''/root/place/bounding_box/coordinates[number()=-76.909393]'''
+            assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(38.791645)  || '''/root/place/bounding_box/coordinates[number()=38.791645]'''
 
     }
 
@@ -379,7 +379,7 @@ public class XmlAssertionSpec extends Specification {
     <path>/api/12</path>
     <correlationId>123456</correlationId>"""
         expect:
-        DocumentContext parsedJson = JsonPath.parse(xml)
+        def parsedJson = JsonPath.parse(xml)
         def verifiable = assertThatXml(parsedJson).node("path").matches("^/api/[0-9]{2}\$")
         verifiable.xPath() == '''$[?(@.path =~ /^\\/api\\/[0-9]{2}$/)]'''
     }
@@ -391,7 +391,7 @@ public class XmlAssertionSpec extends Specification {
 
         """
         expect:
-        DocumentContext parsedJson = JsonPath.parse(xml)
+        def parsedJson = JsonPath.parse(xml)
         def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
         verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
     }
@@ -402,7 +402,7 @@ public class XmlAssertionSpec extends Specification {
     <id>&lt;escape me&gt;</id>
         """
         expect:
-        DocumentContext parsedJson = JsonPath.parse(xml)
+        def parsedJson = JsonPath.parse(xml)
         def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
         verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
     }
@@ -414,7 +414,7 @@ public class XmlAssertionSpec extends Specification {
 
             """
         expect:
-            DocumentContext parsedJson = JsonPath.parse(xml)
+            def parsedJson = JsonPath.parse(xml)
             def verifiable = assertThatXml(parsedJson).node("text").isEqualTo('''text with "quotes" inside''')
             verifiable.xPath() == '''$[?(@.text == 'text with "quotes" inside')]'''
     }

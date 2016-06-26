@@ -7,9 +7,6 @@ import org.eclipse.wst.xml.xpath2.processor.util.DynamicContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.xml.xpath.XPathConstants;
-import javax.xml.xpath.XPathExpression;
-import javax.xml.xpath.XPathExpressionException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -191,25 +188,11 @@ class XmlAsserter implements XmlVerifiable {
             log.trace("WARNING!!! Overriding verification of the XPath. Your tests may pass even though they shouldn't");
             return;
         }
-        boolean xpathMatched;
-        try {
-            ResultSequence expr = xPathExpression(xPathString);
-            xpathMatched = !expr.empty();
-        } catch (Exception e) {
-           log.error("Exception occurred while trying to match XPath <{}>", xPathString, e);
-           throw new RuntimeException(e);
-        }
+        ResultSequence expr = xPathExpression(xPathString);
+        boolean xpathMatched = !expr.empty();
         if (!xpathMatched) {
             throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] doesn't match the XPath <" + xPathString + ">");
         }
-    }
-
-    private Boolean elementIsNull(XPathExpression expr) throws XPathExpressionException {
-        return (Boolean) expr.evaluate(cachedObjects.document, XPathConstants.BOOLEAN);
-    }
-
-    private boolean isXPathWithBooleanMethod(String xPathString) {
-        return xPathString.contains("boolean(") && xPathString.contains("text()[1]");
     }
 
     private ResultSequence xPathExpression(String xPathString) {
@@ -341,6 +324,7 @@ class XmlAsserter implements XmlVerifiable {
             super("Exception occurred while trying to evaluate " +
                     "XPath [" + xPath + "] from XML [" + xmlAsString + "]");
         }
+
         XmlAsserterXpathException(String xPath, String xmlAsString, Exception e) {
             super("Exception occurred while trying to evaluate " +
                     "XPath [" + xPath + "] from XML [" + xmlAsString + "]", e);

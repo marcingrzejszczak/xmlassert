@@ -31,6 +31,9 @@ public class XmlAssertion {
     }
 
     private XmlAssertion(String xml) {
+        if (empty(xml)) {
+            throw new IllegalArgumentException("Can't assert empty xml!");
+        }
         XmlCachedObjects cachedObjects = CACHE.get(xml);
         if (cachedObjects == null && !empty(xml)) {
             try {
