@@ -32,7 +32,7 @@ subprojects {
 
     group = 'com.toomuchcoding.xmlassert'
     project.version = scmVersion.version
-    description = "JSON assertion library"
+    description = "XML assertion library"
 
     repositories {
         jcenter()

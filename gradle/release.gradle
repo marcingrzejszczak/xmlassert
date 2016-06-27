@@ -5,14 +5,14 @@ modifyPom {
 	project {
 		name "$project.name"
 		packaging 'jar'
-		description 'Small library for those who have a hard time understanding the complexity of JSON Path.\''
-		url 'https://github.com/marcingrzejszczak/jsonassert'
+		description 'Small library for those who have a hard time understanding the complexity of XPath'
+		url 'https://github.com/marcingrzejszczak/xmlassert'
 		inceptionYear '2016'
 
 		scm {
-			connection 'git@github.com:marcingrzejszczak/jsonassert.git'
-			developerConnection 'git@github.com:marcingrzejszczak/jsonassert.git'
-			url 'https://github.com/marcingrzejszczak/jsonassert'
+			connection 'git@github.com:marcingrzejszczak/xmlassert.git'
+			developerConnection 'git@github.com:marcingrzejszczak/xmlassert.git'
+			url 'https://github.com/marcingrzejszczak/xmlassert'
 		}
 
 		licenses {

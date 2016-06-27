@@ -4,12 +4,12 @@ import org.assertj.core.api.AbstractAssert;
 import org.w3c.dom.Document;
 
 /**
- * A AssertJ version of JSON Assert.
+ * A AssertJ version of XMLAssert.
  *
- * The methods used by JSON Assert are available as assertions of either
+ * The methods used by XMLAssert are available as assertions of either
  * {@link XmlAsString} or {@link XmlVerifiable} or {@link org.w3c.dom.Document}.
  *
- * Remember that the order of execution matters since it's building the JSON Path
+ * Remember that the order of execution matters since it's building the XPath
  * in the provided sequence.
  *
  * @author Marcin Grzejszczak
@@ -145,13 +145,13 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
     /**
      * @see XmlVerifiable#matchesXPath(String)
      */
-    public XPathAssert matchesXPath(String jsonPath) {
+    public XPathAssert matchesXPath(String xPath) {
         isNotNull();
         try {
-            actual.matchesXPath(jsonPath);
+            actual.matchesXPath(xPath);
         } catch (IllegalStateException e) {
             failWithMessage("Expected XML [%s] to match XPath <%s> but it didn't",
-                    ((XmlAsserter)actual).cachedObjects.xmlAsString, jsonPath);
+                    ((XmlAsserter)actual).cachedObjects.xmlAsString, xPath);
         }
         return this;
     }

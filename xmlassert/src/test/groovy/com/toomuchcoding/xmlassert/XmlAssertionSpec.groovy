@@ -35,9 +35,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def 'should convert an xml with a map as root to a map of path to value '() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                                                                                                        || expectedJsonPath
+            verifiable                                                                                                                                                        || expectedXPath
             assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                    || '''/some/nested[anothervalue=4]'''
             assertThat(xml1).node("some").node("nested").node("anothervalue")                                                                                                 || '''/some/nested/anothervalue'''
             assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id", "a").withAttribute("id2", "b")                                                  || '''/some/nested/withattr[@id='a'][@id2='b']'''
@@ -61,9 +61,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should generate assertions for simple response body"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                     || expectedJsonPath
+            verifiable                                                     || expectedXPath
             assertThat(xml2).node("root").node("property1").isEqualTo("a") || '''/root[property1='a']'''
             assertThat(xml2).node("root").node("property2").isEqualTo("b") || '''/root[property2='b']'''
     }
@@ -80,9 +80,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should generate assertions for null and boolean values"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                        || expectedJsonPath
+            verifiable                                                        || expectedXPath
             assertThat(xml3).node("root").node("property1").isEqualTo("true") || '''/root[property1='true']'''
             assertThat(xml3).node("root").node("property2").isNull()          || '''not(boolean(/root/property2/text()[1]))'''
             assertThat(xml3).node("root").node("property3").isEqualTo(false)  || '''/root[property3='false']'''
@@ -101,9 +101,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should generate assertions for simple response body constructed from map with a list"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                     || expectedJsonPath
+            verifiable                                                                     || expectedXPath
             assertThat(xml4.toString()).node("root").node("property1").isEqualTo("a")                      || '''/root[property1='a']'''
             assertThat(xml4.toString()).node("root").array("property2").contains("a").isEqualTo("sth")     || '''/root/property2[a='sth']'''
             assertThat(xml4.toString()).node("root").array("property2").contains("b").isEqualTo("sthElse") || '''/root/property2[b='sthElse']'''
@@ -123,9 +123,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should generate assertions for array inside response body element"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                   || expectedJsonPath
+            verifiable                                                                   || expectedXPath
             assertThat(xml7).node("root").array("property1").contains("property2").isEqualTo("test1") || '''/root/property1[property2='test1']'''
             assertThat(xml7).node("root").array("property1").contains("property3").isEqualTo("test2") || '''/root/property1[property3='test2']'''
     }
@@ -141,9 +141,9 @@ public class XmlAssertionSpec extends Specification {
 
     def "should generate assertions for nested objects in response body"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                       || expectedJsonPath
+            verifiable                                                                       || expectedXPath
             assertThat(xml8).node("root").node("property2").node("property3").isEqualTo("b") || '''/root/property2[property3='b']'''
             assertThat(xml8).node("root").node("property1").isEqualTo("a")                   || '''/root[property1='a']'''
     }
@@ -157,9 +157,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should generate regex assertions for map objects in response body"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                     || expectedJsonPath
+            verifiable                                                                     || expectedXPath
             assertThat(xml9.toString()).node("root").node("property2").matches("[0-9]{3}") || '''/root[matches(property2, '[0-9]{3}')]'''
             assertThat(xml9.toString()).node("root").node("property1").isEqualTo("a")      || '''/root[property1='a']'''
     }
@@ -186,9 +186,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should work with more complex stuff and xpaths"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                                                      || expectedJsonPath
+            verifiable                                                                                                      || expectedXPath
             assertThat(xml10.toString()).node("root").array("errors").contains("property").isEqualTo("bank_account_number") || '''/root/errors[property='bank_account_number']'''
             assertThat(xml10.toString()).node("root").array("errors").contains("message").isEqualTo("incorrect_format")     || '''/root/errors[message='incorrect_format']'''
     }
@@ -209,9 +209,9 @@ public class XmlAssertionSpec extends Specification {
     @Unroll
     def "should manage to parse a double array"() {
         expect:
-            verifiable.xPath() == expectedJsonPath
+            verifiable.xPath() == expectedXPath
         where:
-            verifiable                                                                                                   || expectedJsonPath
+            verifiable                                                                                                   || expectedXPath
             assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(38.995548)  || '''/root/place/bounding_box/coordinates[number()=38.995548]'''
             assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(-77.119759) || '''/root/place/bounding_box/coordinates[number()=-77.119759]'''
             assertThat(xml11).node("root").node("place").node("bounding_box").array("coordinates").isEqualTo(-76.909393) || '''/root/place/bounding_box/coordinates[number()=-76.909393]'''

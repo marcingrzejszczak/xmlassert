@@ -4,9 +4,9 @@ image::https://travis-ci.org/marcingrzejszczak/xmlassert.svg?branch=master[Build
 image::https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert/badge.svg?style=plastic[Maven Central, link="https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert"]
 image::https://badges.gitter.im/Join%20Chat.svg[Gitter, link="https://gitter.im/marcingrzejszczak/xmlassert?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
 
-= JSON Assert
+= XML Assert
 
-Small library for those who have a hard time understanding the complexity of JSON Path.
+Small library for those who have a hard time understanding the complexity of XPath.
 
 :toc:
 :toc-placement!:
@@ -16,123 +16,133 @@ toc::[]
 
 = Rationale
 
-Have you ever met such a JSON Path expression?
+Have you ever met such a XPath expression?
 
 [source]
 ----
-$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]
+/root[matches(property1, concat('',"'",'"<>\[\]\(\)'))]
 ----
 
 Pretty isn't it? Wouldn't it be better to just read:
 
 [source,java]
 ----
-assertThat(jsonAsString).array().field("place").field("bounding_box").array("coordinates").array().contains(38.791645).value()
+assertThat(xml).node("root").node("property1").matches('\'"<>\\[\\]\\(\\)')
 ----
 
-JSON Assert to the rescue!
+XMLAssert to the rescue!
 
 == Fast intro
 
 === Assertions
 
-The library has a couple of main classes. One is `xmlassertion` that gives you public static methods:
+The library has a couple of main classes. One is `XmlAssertion` that gives you public static methods:
 
 [source,java]
 ----
-public static JsonVerifiable assertThat(String body)
+public static XmlVerifiable assertThat(String xml)
 ----
 
-NOTE! The aforementioned version caches the `DocumentContext` for the provided JSON.
+NOTE! The aforementioned version caches the `Document` for the provided XML.
 
 and
 
 [source,java]
 ----
-public static JsonVerifiable assertThat(DocumentContext parsedXml)
+public static XmlVerifiable assertThat(org.w3c.dom.Document parsedXml)
 ----
 
-Both these methods give return the public `JsonVerifiable` interface which is a fluent interface with which you can build your
-JSON path expression. Please check the Javadocs of that file for more information.
+Both these methods give return the public `XmlVerifiable` interface which is a fluent interface with which you can build your
+XPath expression. Please check the Javadocs of that file for more information.
 
-=== Building JSON Paths
+=== Building XPaths
 
-As you could see it's not that easy to build a JSON Path. With JSON Assert you can use the `JsonPath` class to finally
-build the JSON Paths yourself! This is the contract for the `JsonPath` class:
+As you could see it's not that easy to build a XPath. With XMLAssert you can use the `XPathBuilder` class to finally
+build the XPaths yourself! This is the contract for the `XPathBuilder` class:
 
 [source,java]
 ----
 /**
- * Returns a builder of {@link JsonVerifiable} with which you can build your
- * JSON Path. Once finished just call {@link JsonVerifiable#jsonPath()} to get
- * JSON Path as String.
+ * Returns a builder of {@link XmlVerifiable} with which you can build your
+ * XPath. Once finished just call {@link XmlVerifiable#xPath()} to get
+ * XPath as String.
  */
-public static JsonVerifiable builder()
+public static XmlVerifiable builder()
 ----
 
 and when you call:
 
 [source,java]
 ----
-JsonPath.builder().field("some").field("nested").array("withlist").contains("name").isEqualTo("name1").jsonPath();
+XPathBuilder.builder().node("some").node("nested").array("withlist").contains("name").isEqualTo("name1").xPath();
 ----
 
-you will receive `$.some.nested.withlist[*][?(@.name == 'name1')]` String.
+you will receive `/some/nested/withlist[name='name1']` String.
 
-=== Retrieving JSON Path value (since 0.4.0)
+=== Retrieving XPath value
 
-Wouldn't it be great to retrieve the value from the JSON via the JSON Path? There you go!
+Wouldn't it be great to retrieve the value from the XML via the XPath? There you go!
+
+NOTE: It works only for String values
 
 [source,groovy]
 ----
-given:
-    String json = ''' [ {
-                            "some" : {
-                                "nested" : {
-                                    "json" : "with value",
-                                    "anothervalue": 4,
-                                    "withlist" : [
-                                        { "name" :"name1"} ,
-                                        {"name": "name2"},
-                                        {"anothernested": { "name": "name3"} }
-                                    ]
-                                }
-                            }
-                        },
-                        {
-                            "someother" : {
-                                "nested" : {
-                                    "json" : true,
-                                    "anothervalue": 4,
-                                    "withlist" : [
-                                        { "name" :"name1"} , {"name": "name2"}
-                                    ],
-                                    "withlist2" : [
-                                        "a", "b"
-                                    ]
-                                }
-                            }
-                        }
-                    ]
-'''
-    expect:
-        com.toomuchcoding.xmlassert.JsonPath.builder(json).array().field("some").field("nested").field("json").read(String) == 'with value'
-        com.toomuchcoding.xmlassert.JsonPath.builder(json).array().field("some").field("nested").field("anothervalue").read(Integer) == 4
-        assertThat(json).array().field("some").field("nested").array("withlist").field("name").read(List) == ['name1', 'name2']
-        assertThat(json).array().field("someother").field("nested").array("withlist2").read(List) == ['a', 'b']
-        assertThat(json).array().field("someother").field("nested").field("json").read(Boolean) == true
+def 'should resolve the value of XML via XPath'() {
+        given:
+            String xml =
+                    '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <element>
+            <some>
+                <nested>
+                    <json>with value</json>
+                    <anothervalue>4</anothervalue>
+                    <withlist>
+                        <name>name1</name>
+                    </withlist>
+                    <withlist>
+                        <name>name2</name>
+                    </withlist>
+                    <withlist>
+                        <anothernested>
+                            <name>name3</name>
+                        </anothernested>
+                    </withlist>
+                </nested>
+            </some>
+        </element>
+        <element>
+            <someother>
+                <nested>
+                    <json>true</json>
+                    <anothervalue>4</anothervalue>
+                    <withlist>
+                        <name>name1</name>
+                    </withlist>
+                    <withlist>
+                        <name>name2</name>
+                    </withlist>
+                    <withlist2>a</withlist2>
+                    <withlist2>b</withlist2>
+                </nested>
+            </someother>
+        </element>
+    </root>'''
+        expect:
+            XPathBuilder.builder(xml).node("root").array("element").node("some").node("nested").node("json").read() == 'with value'
+            XPathBuilder.builder(xml).node("root").array("element").node("some").node("nested").node("anothervalue").read() == 4.toString()
+            assertThat(xml).node("root").array("element").node("someother").node("nested").node("json").read() == true.toString()
+    }
 ----
 
-All thanks to the `JsonReader` interface:
+All thanks to the `XmlReader` interface:
 
 [source,java]
 ----
 /**
- * Returns the value from the JSON, based on the created JSON Path. If the result is an
- * JSON Array and has a single value then that value is returned. If that's an array with
- * greater number of results then that array is returned.
+ * Returns the value from the XML, based on the created XPath.
  */
-<T> T read(Class<T> clazz);
+String read();
 ----
 
 == How to add it
@@ -146,125 +156,108 @@ testCompile 'com.toomuchcoding.xmlassert:xmlassert:{lib_version}'
 
 == Dependencies
 
-JSON Assert is really lightweight. It has only one dependency
+XMLAssert is really lightweight. It depends only on:
 
 [source,groovy]
 ----
-compile "com.jayway.jsonpath:json-path:2.2.0"
+compile 'com.rackspace.eclipse.webtools.sourceediting:org.eclipse.wst.xml.xpath2.processor:2.1.100'
+compile 'xerces:xercesImpl:2.11.0'
+compile "ch.qos.logback:logback-classic:1.1.2"
 ----
 
 == Examples
 
 === Example 1
 
-For the JSON
+For the XML
 
-[source,json]
+[source,xml]
 ----
- {
-        "some" : {
-            "nested" : {
-                "json" : "with \"val'ue",
-                "anothervalue": 4,
-                "withlist" : [
-                    { "name" :"name1"} ,
-                    {"name": "name2"}
-                ]
-            }
-        }
-    }
-----
-
-The following is true
-
-JSON Assert expressions:
-
-[source,java]
-----
-xmlassertion.assertThat(json).field("some").field("nested").field("anothervalue").isEqualTo(4)
-xmlassertion.assertThat(json).field("some").field("nested").array("withlist").contains("name").isEqualTo("name1")
-xmlassertion.assertThat(json).field("some").field("nested").array("withlist").contains("name").isEqualTo("name2")
-xmlassertion.assertThat(json).field("some").field("nested").field("json").isEqualTo("with \"val'ue")
-----
-
-Respective JSON Path expressions:
-
-[source]
-----
-$.some.nested[?(@.anothervalue == 4)]
-$.some.nested.withlist[*][?(@.name == 'name1')]
-$.some.nested.withlist[*][?(@.name == 'name2')]
-$.some.nested[?(@.json == 'with "val\\'ue')]
-----
-
-=== Example 2
-
-For the JSON
-
-[source,json]
-----
- [{
-    "place":
-    {
-        "bounding_box":
-        {
-            "coordinates":
-                [[
-                    [-77.119759,38.995548],
-                    [-76.909393,38.791645]
-                ]]
-        }
-    }
-}]
+ <?xml version="1.0" encoding="UTF-8" ?>
+ <some>
+     <nested>
+         <json>with &quot;val&apos;ue</json>
+         <anothervalue>4</anothervalue>
+         <withattr id="a" id2="b">foo</withattr>
+         <withlist>
+             <name>name1</name>
+         </withlist>
+         <withlist>
+             <name>name2</name>
+         </withlist>
+         <withlist>
+             8
+         </withlist>
+         <withlist>
+             <name id="10" surname="kowalski">name3</name>
+         </withlist>
+     </nested>
+ </some>
 ----
 
 The following is true
 
-JSON Assert expressions:
+XMLAssert expressions:
 
 [source,java]
 ----
-xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.995548).value()
-xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-77.119759).value()
-xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(-76.909393).value()
-xmlassertion.assertThat(json11).array().field("place").field("bounding_box").array("coordinates").array().arrayField().contains(38.791645).value()
+assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                    
+assertThat(xml1).node("some").node("nested").node("anothervalue")                                                                                                 
+assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id", "a").withAttribute("id2", "b")                                                  
+assertThat(xml1).node("some").node("nested").node("withattr").isEqualTo("foo").withAttribute("id", "a").withAttribute("id2", "b")                                 
+assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                 
+assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1")                                                                
+assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name2")                                                                
+assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name3").withAttribute("id", "10").withAttribute("surname", "kowalski") 
+assertThat(xml1).node("some").node("nested").array("withlist").isEqualTo(8)                                                                                       
+assertThat(xml1).node("some").node("nested").node("json").isEqualTo("with \"val'ue")                                                                              
+assertThat(xml1).node("some", "nested", "json").isEqualTo("with \"val'ue")                                                                                        
 ----
 
-Respective JSON Path expressions:
+Respective XPath expressions:
 
 [source]
 ----
-$[*].place.bounding_box.coordinates[*][*][?(@ == 38.995548)]
-$[*].place.bounding_box.coordinates[*][*][?(@ == -77.119759)]
-$[*].place.bounding_box.coordinates[*][*][?(@ == -76.909393)]
-$[*].place.bounding_box.coordinates[*][*][?(@ == 38.791645)]
+/some/nested[anothervalue=4]
+/some/nested/anothervalue
+/some/nested/withattr[@id='a'][@id2='b']
+/some/nested[withattr='foo']/withattr[@id='a'][@id2='b']
+/some/nested[anothervalue=4]
+/some/nested/withlist[name='name1']
+/some/nested/withlist[name='name2']
+/some/nested/withlist[name='name3']/name[@id='10'][@surname='kowalski']
+/some/nested/withlist[number()=8]
+/some/nested[json=concat('with "val',"'",'ue')]
+/some/nested[json=concat('with "val',"'",'ue')]
 ----
 
 === More examples
 
-More examples can be found in the `xmlassertionSpec` in the test sources
+More examples can be found in the `XmlAssertionSpec` in the test sources
 
 = Additional features
 
-== AssertJ integration (since 0.2.0)
+== AssertJ integration
 
-There is a possibility to use JSON Assert via AssertJ. Regardless of which version you'll choose
-you have the same class that you can use to start the fluent assertion
+There is a possibility to use XMLAssert via AssertJ. Regardless of which version you'll choose
+you have the same class that you can use to start the fluent assertion.
 
 The standard version
 
 [source,java]
 ----
-com.toomuchcoding.xmlassert.xmlassertions.assertThat(DocumentContext context);
-com.toomuchcoding.xmlassert.xmlassertions.assertThat(JsonVerifiable jsonVerifiable);
+com.toomuchcoding.xmlassert.XmlAssertions.assertThat(Document context);
+com.toomuchcoding.xmlassert.XmlAssertions.assertThat(XmlAsString xmlAsString);
+com.toomuchcoding.xmlassert.XmlAssertions.assertThat(XmlVerifiable xmlVerifiable);
 ----
 
 or the BDD version
 
 [source,java]
 ----
-com.toomuchcoding.xmlassert.BDDxmlassertions.then(DocumentContext context);
-com.toomuchcoding.xmlassert.BDDxmlassertions.then(JsonVerifiable jsonVerifiable);
+com.toomuchcoding.xmlassert.BDDXmlAssertions.then(DocumentContext context);
+com.toomuchcoding.xmlassert.BDDXmlAssertions.then(XmlAsString xmlAsString);
+com.toomuchcoding.xmlassert.BDDXmlAssertions.then(XmlVerifiable xmlVerifiable);
 ----
 
 === AssertJ 2.x
@@ -284,13 +277,6 @@ Just add
 --
 testCompile 'com.toomuchcoding.xmlassert:xmlassert-assertj-java8:{lib_version}'
 --
-
-= Migrations
-
-== From 0.1.x -> 0.2.0
-
-- Convert all project imports from `com.blogspot.toomuchcoding:xmlassert` to `com.toomuchcoding.xmlassert:xmlassert`
-- Convert all code imports from `com.blogspot.toomuchcoding.xmlassert` to `com.toomuchcoding.xmlassert`
 
 = Contact
 
