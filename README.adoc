@@ -6,6 +6,8 @@ image::https://badges.gitter.im/Join%20Chat.svg[Gitter, link="https://gitter.im/
 
 = XML Assert
 
+image:https://badges.gitter.im/marcingrzejszczak/xmlassert.svg[link="https://gitter.im/marcingrzejszczak/xmlassert?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge"]
+
 Small library for those who have a hard time understanding the complexity of XPath.
 
 :toc:
