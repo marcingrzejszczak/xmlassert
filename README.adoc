@@ -13,7 +13,6 @@ Small library for those who have a hard time understanding the complexity of XPa
 
 toc::[]
 
-
 = Rationale
 
 Have you ever met such a XPath expression?
