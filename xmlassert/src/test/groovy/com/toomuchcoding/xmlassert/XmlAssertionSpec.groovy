@@ -221,114 +221,34 @@ public class XmlAssertionSpec extends Specification {
 
     }
 
-    @Unroll
-    def 'should convert an xml with list as root to a map of path to value'() {
-        expect:
-            assertThat(xml).array().node("some").node("nested").node("json").isEqualTo("with value").xPath() == '''$[*].some.nested[?(@.json == 'with value')]'''
-            assertThat(xml).array().node("some").node("nested").node("anothervalue").isEqualTo(4).xPath() == '''$[*].some.nested[?(@.anothervalue == 4)]'''
-            assertThat(xml).array().node("some").node("nested").array("withlist").contains("name").isEqualTo("name1").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name1')]'''
-            assertThat(xml).array().node("some").node("nested").array("withlist").contains("name").isEqualTo("name2").xPath() == '''$[*].some.nested.withlist[*][?(@.name == 'name2')]'''
-            assertThat(xml).array().node("some").node("nested").array("withlist").node("anothernested").node("name").isEqualTo("name3").xPath() == '''$[*].some.nested.withlist[*].anothernested[?(@.name == 'name3')]'''
-        where:
-        xml << [
-                '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>
-        <some>
-            <nested>
-                <json>with value</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-                <withlist>
-                    <anothernested>
-                        <name>name3</name>
-                    </anothernested>
-                </withlist>
-            </nested>
-        </some>
-    </0>
-    <1>
-        <someother>
-            <nested>
-                <json>with value</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-            </nested>
-        </someother>
-    </1>
-
-    ''',
-    '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>
-        <someother>
-            <nested>
-                <json>with value</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-            </nested>
-        </someother>
-    </0>
-    <1>
-        <some>
-            <nested>
-                <json>with value</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-                <withlist>
-                    <anothernested>
-                        <name>name3</name>
-                    </anothernested>
-                </withlist>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-            </nested>
-        </some>
-    </1>
-''']
-    }
-
-    def "should run json path when provided manually"() {
+    def "should run XPath when provided manually"() {
         given:
             String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>a</property1>
-    <property2>
-        <property3>b</property3>
-    </property2>
+    <root>
+        <property1>a</property1>
+        <property2>
+            <property3>b</property3>
+        </property2>
+    </root>
 """
         and:
-            String jsonPath = '''$[?(@.property1 == 'a')]'''
+            String jsonPath = '''/root/property2[property3='b']'''
         expect:
             assertThat(xml).matchesXPath(jsonPath)
     }
 
-    def "should throw exception when json path is not matched"() {
+    def "should throw exception when XPath is not matched"() {
         given:
             String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>a</property1>
-    <property2>
-        <property3>b</property3>
-    </property2>
-
+    <root>
+        <property1>a</property1>
+        <property2>
+            <property3>b</property3>
+        </property2>
+    </root>
 """
         and:
-            String jsonPath = '''$[?(@.property1 == 'c')]'''
+            String jsonPath = '''/root/property2[property3='b']'''
         when:
             assertThat(xml).matchesXPath(jsonPath)
         then:
