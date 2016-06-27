@@ -3,6 +3,7 @@ package com.toomuchcoding.xmlassert;
 import org.eclipse.wst.xml.xpath2.api.ResultSequence;
 import org.eclipse.wst.xml.xpath2.api.XPath2Expression;
 import org.eclipse.wst.xml.xpath2.processor.Engine;
+import org.eclipse.wst.xml.xpath2.processor.internal.types.ElementType;
 import org.eclipse.wst.xml.xpath2.processor.util.DynamicContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,8 @@ import java.util.regex.Pattern;
 class XmlAsserter implements XmlVerifiable {
 
     private static final Logger log = LoggerFactory.getLogger(XmlAsserter.class);
+
+    private final static Pattern SPECIAL_REGEX_CHARS = Pattern.compile("[{}()\\[\\].+*?^$\\\\|]");
 
     protected final XmlCachedObjects cachedObjects;
     protected final LinkedList<String> xPathBuffer;
@@ -54,7 +57,7 @@ class XmlAsserter implements XmlVerifiable {
         if (isReadyToCheck()) {
             asserter.xPathBuffer.offer("/" + fieldName);
         }
-        asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeTextForXPath(attributeValue) + "]");
+        asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeText(attributeValue) + "]");
         updateCurrentBuffer(asserter);
         asserter.checkBufferedXPathString();
         return asserter;
@@ -86,7 +89,7 @@ class XmlAsserter implements XmlVerifiable {
         ReadyToCheckAsserter readyToCheck = new ReadyToCheckAsserter(cachedObjects,
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
         removeLastFieldElement(readyToCheck);
-        readyToCheck.xPathBuffer.offer("[" + fieldName + "=" + escapeTextForXPath(value) + "]");
+        readyToCheck.xPathBuffer.offer("[" + fieldName + "=" + escapeText(value) + "]");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -163,7 +166,7 @@ class XmlAsserter implements XmlVerifiable {
                 xPathBuffer, fieldName, xmlAsserterConfiguration);
         removeLastFieldElement(readyToCheck);
         readyToCheck.xPathBuffer.offer("[matches(" + fieldName + ", " +
-                escapeTextForXPath(value) + ")]");
+                escapeText(escapeRegex(value)) + ")]");
         updateCurrentBuffer(readyToCheck);
         readyToCheck.checkBufferedXPathString();
         return readyToCheck;
@@ -266,7 +269,7 @@ class XmlAsserter implements XmlVerifiable {
         return false;
     }
 
-    protected static String escapeTextForXPath(Object object) {
+    protected static String escapeText(Object object) {
         String string = String.valueOf(object);
         if (!string.contains("'")) {
             return wrapValueWithSingleQuotes(string);
@@ -291,6 +294,14 @@ class XmlAsserter implements XmlVerifiable {
         return buildStringFromList(list);
     }
 
+    protected static String escapeRegex(Object object) {
+        return String.valueOf(object);
+    }
+
+    private static String escapeSpecialRegexChars(String str) {
+        return SPECIAL_REGEX_CHARS.matcher(str).replaceAll("\\\\$0");
+    }
+
     private static String buildStringFromList(List<String> list) {
         StringBuilder builder = new StringBuilder();
         for (String string : list) {
@@ -312,7 +323,10 @@ class XmlAsserter implements XmlVerifiable {
         if (expr.empty()) {
             throw new XmlAsserterXpathException(xPath(), cachedObjects.xmlAsString);
         }
-        return String.valueOf(expr.value(0));
+        if (expr instanceof ElementType) {
+           return ((ElementType) expr).getStringValue();
+        }
+        throw new UnsupportedOperationException("Can't return values of complex types");
     }
 
     protected boolean isReadyToCheck() {

@@ -4,9 +4,9 @@ import java.util.LinkedList;
 
 class ReadyToCheckAsserter extends XmlAsserter {
 
-    public ReadyToCheckAsserter(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
+    public ReadyToCheckAsserter(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
                                 Object fieldName, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(cachedObjects, jsonPathBuffer, fieldName, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, fieldName, xmlAsserterConfiguration);
     }
 
     @Override

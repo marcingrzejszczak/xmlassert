@@ -1,4 +1,3 @@
 rootProject.name = "xmlassert-root"
 
-//include 'xmlassert-assertj-java7', 'xmlassert-assertj-java8', 'xmlassert'
-include 'xmlassert'
+include 'xmlassert-assertj-java7', 'xmlassert-assertj-java8', 'xmlassert'

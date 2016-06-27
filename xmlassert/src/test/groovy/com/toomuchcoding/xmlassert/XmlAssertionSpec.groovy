@@ -8,8 +8,6 @@ import spock.lang.Unroll
 
 import static XmlAssertion.assertThat
 import static XmlAssertion.assertThatXml
-import static groovy.json.JsonOutput.toJson
-
 
 public class XmlAssertionSpec extends Specification {
 
@@ -232,9 +230,9 @@ public class XmlAssertionSpec extends Specification {
     </root>
 """
         and:
-            String jsonPath = '''/root/property2[property3='b']'''
+            String xPath = '''/root/property2[property3='b']'''
         expect:
-            assertThat(xml).matchesXPath(jsonPath)
+            assertThat(xml).matchesXPath(xPath)
     }
 
     def "should throw exception when XPath is not matched"() {
@@ -248,220 +246,189 @@ public class XmlAssertionSpec extends Specification {
     </root>
 """
         and:
-            String jsonPath = '''/root/property2[property3='b']'''
+            String xPath = '''/root/property2[property3='non-existing']'''
         when:
-            assertThat(xml).matchesXPath(jsonPath)
+            assertThat(xml).matchesXPath(xPath)
         then:
             IllegalStateException illegalStateException = thrown(IllegalStateException)
-            illegalStateException.message.contains("Parsed JSON")
-            illegalStateException.message.contains("doesn't match")
+            illegalStateException.message.contains("Parsed XML")
+            illegalStateException.message.contains("doesn't match the XPath")
     }
 
     def "should not throw exception when json path is not matched and system prop overrides the check"() {
         given:
             String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <property1>a</property1>
-    <property2>
-        <property3>b</property3>
-    </property2>
+    <root>
+        <property1>a</property1>
+        <property2>
+            <property3>b</property3>
+        </property2>
+    </root>
     """
         and:
-            String jsonPath = '''$[?(@.property1 == 'c')]'''
+            String xPath = '''/root/property2[property3='non-existing']'''
         when:
-            assertThat(xml).withoutThrowingException().matchesXPath(jsonPath)
+            assertThat(xml).withoutThrowingException().matchesXPath(xPath)
         then:
             noExceptionThrown()
     }
 
-    def "should generate escaped regex assertions for boolean objects in response body"() {
+    def "should generate escaped regex assertions for text with regular expression values"() {
         given:
-        Map xml =  [
-                property2: true
-        ]
+            // '"<>[]()
+            String xml = """<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <property1>&apos;&quot;&lt;&gt;[]()</property1>
+        </root>"""
         expect:
-        def verifiable = assertThat(toJson(xml)).node("property2").matches('true|false')
-        verifiable.xPath() == '''$[?(@.property2 =~ /true|false/)]'''
-    }
-
-    def "should generate escaped regex assertions for numbers objects in response body"() {
-        given:
-        Map xml =  [
-                property2: 50
-        ]
-        expect:
-        def verifiable = assertThat(toJson(xml)).node("property2").matches('[0-9]{2}')
-        verifiable.xPath() == '''$[?(@.property2 =~ /[0-9]{2}/)]'''
+            def verifiable = assertThat(xml).node("root").node("property1").matches('\'"<>\\[\\]\\(\\)')
+            verifiable.xPath() == '''/root[matches(property1, concat('',"'",'"<>\\[\\]\\(\\)'))]'''
     }
 
     def "should escape regular expression properly"() {
         given:
-        String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <path>/api/12</path>
-    <correlationId>123456</correlationId>"""
+            String xml = """<?xml version="1.0" encoding="UTF-8" ?>
+            <root>
+                <path>/api/12</path>
+                <correlationId>123456</correlationId>
+            </root>"""
         expect:
-        def parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).node("path").matches("^/api/[0-9]{2}\$")
-        verifiable.xPath() == '''$[?(@.path =~ /^\\/api\\/[0-9]{2}$/)]'''
+            def verifiable = assertThatXml(xml).node("root").node("path").matches("^/api/[0-9]{2}\$")
+            verifiable.xPath() == '''/root[matches(path, '^/api/[0-9]{2}$')]'''
     }
 
     def "should escape single quotes in a quoted string"() {
         given:
-        String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <text>text with 'quotes' inside</text>
-
-        """
+            String xml = """<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <text>text with &apos;quotes&apos; inside</text>
+        </root>
+            """
         expect:
-        def parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
-        verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
+            def verifiable = assertThatXml(xml).node("root").node("text").isEqualTo("text with 'quotes' inside")
+            verifiable.xPath() == '''/root[text=concat('text with ',"'",'quotes',"'",' inside')]'''
     }
 
     def "should escape brackets in a string"() {
         given:
-        String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <id>&lt;escape me&gt;</id>
-        """
+            String xml = """<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <id>&lt;escape me&gt;</id>
+        </root>
+            """
         expect:
-        def parsedJson = JsonPath.parse(xml)
-        def verifiable = assertThatXml(parsedJson).node("text").isEqualTo("text with 'quotes' inside")
-        verifiable.xPath() == '''$[?(@.text == 'text with \\'quotes\\' inside')]'''
+            def verifiable = assertThatXml(xml).node("root").node("id").isEqualTo("<escape me>")
+            verifiable.xPath() == '''/root[id='<escape me>']'''
     }
 
     def "should escape double quotes in a quoted string"() {
         given:
             String xml = """<?xml version="1.0" encoding="UTF-8" ?>
-    <text>text with &quot;quotes&quot; inside</text>
-
+        <root>
+            <text>text with &quot;quotes&quot; inside</text>
+        </root>
             """
         expect:
-            def parsedJson = JsonPath.parse(xml)
-            def verifiable = assertThatXml(parsedJson).node("text").isEqualTo('''text with "quotes" inside''')
-            verifiable.xPath() == '''$[?(@.text == 'text with "quotes" inside')]'''
+            def verifiable = assertThatXml(xml).node("root").node("text").isEqualTo('''text with "quotes" inside''')
+            verifiable.xPath() == '''/root[text='text with "quotes" inside']'''
     }
 
     def 'should resolve the value of XML via XPath'() {
         given:
             String xml =
-                    '''
-                            <?xml version="1.0" encoding="UTF-8" ?>
-    <0>
-        <some>
-            <nested>
-                <json>with value</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-                <withlist>
-                    <anothernested>
-                        <name>name3</name>
-                    </anothernested>
-                </withlist>
-            </nested>
-        </some>
-    </0>
-    <1>
-        <someother>
-            <nested>
-                <json>true</json>
-                <anothervalue>4</anothervalue>
-                <withlist>
-                    <name>name1</name>
-                </withlist>
-                <withlist>
-                    <name>name2</name>
-                </withlist>
-                <withlist2>a</withlist2>
-                <withlist2>b</withlist2>
-            </nested>
-        </someother>
-    </1>
-
-        '''
+                    '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <element>
+            <some>
+                <nested>
+                    <json>with value</json>
+                    <anothervalue>4</anothervalue>
+                    <withlist>
+                        <name>name1</name>
+                    </withlist>
+                    <withlist>
+                        <name>name2</name>
+                    </withlist>
+                    <withlist>
+                        <anothernested>
+                            <name>name3</name>
+                        </anothernested>
+                    </withlist>
+                </nested>
+            </some>
+        </element>
+        <element>
+            <someother>
+                <nested>
+                    <json>true</json>
+                    <anothervalue>4</anothervalue>
+                    <withlist>
+                        <name>name1</name>
+                    </withlist>
+                    <withlist>
+                        <name>name2</name>
+                    </withlist>
+                    <withlist2>a</withlist2>
+                    <withlist2>b</withlist2>
+                </nested>
+            </someother>
+        </element>
+    </root>'''
         expect:
-            XPathBuilder.builder(xml).array().node("some").node("nested").node("json").read(String) == 'with value'
-            XPathBuilder.builder(xml).array().node("some").node("nested").node("anothervalue").read(Integer) == 4
-            assertThat(xml).array().node("some").node("nested").array("withlist").node("name").read(List) == ['name1', 'name2']
-            assertThat(xml).array().node("someother").node("nested").array("withlist2").read(List) == ['a', 'b']
-            assertThat(xml).array().node("someother").node("nested").node("json").read(Boolean) == true
-    }
-
-    def 'should assert xml with only top list elements'() {
-        given:
-            String xml = '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>Java</0>
-    <1>Java8</1>
-    <2>Spring</2>
-    <3>SpringBoot</3>
-    <4>Stream</4>
-    '''
-        expect:
-            assertThatXml(xml).arrayField().contains("Java8").value()
-            assertThatXml(xml).arrayField().contains("Spring").value()
-            assertThatXml(xml).arrayField().contains("Java").value()
-            assertThatXml(xml).arrayField().contains("Stream").value()
-            assertThatXml(xml).arrayField().contains("SpringBoot").value()
+            XPathBuilder.builder(xml).node("root").array("element").node("some").node("nested").node("json").read() == 'with value'
+            XPathBuilder.builder(xml).node("root").array("element").node("some").node("nested").node("anothervalue").read() == 4.toString()
+            // assertThat(xml).node("root").array("element").node("some").node("nested").array("withlist").node("name").read() == ['name1', 'name2'].toString()
+            //assertThat(xml).node("root").array("element").node("someother").node("nested").array("withlist2").read() == ['a', 'b'].toString()
+            assertThat(xml).node("root").array("element").node("someother").node("nested").node("json").read() == true.toString()
     }
 
     def 'should match array containing an array of primitives'() {
         given:
             String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <first_name>existing</first_name>
-    <partners>
-        <role>AGENT</role>
-        <payment_methods>BANK</payment_methods>
-        <payment_methods>CASH</payment_methods>
-    </partners>
+    <root>
+        <first_name>existing</first_name>
+        <elements>
+            <partners>
+                <role>AGENT</role>
+                <payment_methods>BANK</payment_methods>
+                <payment_methods>CASH</payment_methods>
+            </partners>
+        </elements>
+    </root>
 '''
         expect:
-            def verifiable = assertThatXml(xml).array("partners").array("payment_methods").arrayField().isEqualTo("BANK").value()
-            verifiable.xPath() == '''$.partners[*].payment_methods[?(@ == 'BANK')]'''
+            def verifiable = assertThatXml(xml).node("root").array("elements").array("partners").contains("payment_methods").isEqualTo("BANK")
+            verifiable.xPath() == '''/root/elements/partners[payment_methods='BANK']'''
     }
 
     def 'should match pattern in array'() {
         given:
-            String json =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <authorities>ROLE_ADMIN</authorities>'''
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <authorities>ROLE_ADMIN</authorities>
+    </root>
+    '''
 
         expect:
-            def verifiable = assertThatXml(json).array("authorities").arrayField().matches("^[a-zA-Z0-9_\\- ]+\$").value()
-            verifiable.xPath() == '''$.authorities[?(@ =~ /^[a-zA-Z0-9_\\- ]+$/)]'''
+            def verifiable = assertThatXml(xml).node("root").array("authorities").matches("^[a-zA-Z0-9_\\- ]+\$")
+            verifiable.xPath() == '''/root/authorities[matches(text(), '^[a-zA-Z0-9_\\- ]+$')]'''
     }
 
     @Issue("#10")
     def 'should manage to parse array with string values'() {
         given:
-            String json =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <some_list>name1</some_list>
-    <some_list>name2</some_list>
-    '''
-
-        expect:
-            def v1 = assertThat(JsonPath.parse(json)).array("some_list").arrayField().isEqualTo("name1")
-            def v2 = assertThat(JsonPath.parse(json)).array("some_list").arrayField().isEqualTo("name2")
-        and:
-            v1.xPath() == '''$.some_list[?(@ == 'name1')]'''
-            v2.xPath() == '''$.some_list[?(@ == 'name2')]'''
-    }
-
-    def 'should parse an array of arrays that are root elements'() {
-        given:
             String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
-    <0>Programming</0>
-    <0>Java</0>
-    <1>Programming</1>
-    <1>Java</1>
-    <1>Spring</1>
-    <1>Boot</1>
-    '''
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
 
         expect:
-            def v1 = assertThatXml(JsonPath.parse(xml)).array().arrayField().isEqualTo("Java").value()
+            def v1 = assertThat(xml).node("root").array("some_list").isEqualTo("name1")
+            def v2 = assertThat(xml).node("root").array("some_list").isEqualTo("name2")
         and:
-            v1.xPath() == '''$[*][?(@ == 'Java')]'''
+            v1.xPath() == '''/root/some_list[text()='name1']'''
+            v2.xPath() == '''/root/some_list[text()='name2']'''
     }
 
 }

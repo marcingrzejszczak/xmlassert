@@ -1,14 +1,13 @@
 package com.toomuchcoding.xmlassert;
 
 import org.assertj.core.api.AbstractAssert;
-
-import com.jayway.jsonpath.DocumentContext;
+import org.w3c.dom.Document;
 
 /**
  * A AssertJ version of JSON Assert.
  *
  * The methods used by JSON Assert are available as assertions of either
- * {@link DocumentContext} or {@link XmlVerifiable}.
+ * {@link XmlAsString} or {@link XmlVerifiable} or {@link org.w3c.dom.Document}.
  *
  * Remember that the order of execution matters since it's building the JSON Path
  * in the provided sequence.
@@ -19,8 +18,12 @@ import com.jayway.jsonpath.DocumentContext;
  */
 public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
 
-    public XPathAssert(DocumentContext actual) {
+    public XPathAssert(Document actual) {
         super(XmlAssertion.assertThatXml(actual), XPathAssert.class);
+    }
+
+    public XPathAssert(XmlAsString actual) {
+        super(XmlAssertion.assertThatXml(actual.xml), XPathAssert.class);
     }
 
     public XPathAssert(XmlVerifiable actual) {
@@ -28,51 +31,43 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
     }
 
     /**
-     * @see XmlVerifiable#contains(Object)
+     * @see XmlVerifiable#node(String)
      */
-    public XPathAssert contains(Object value) {
+    public XPathAssert node(String nodeName) {
         isNotNull();
-        return new XPathAssert(actual.contains(value));
+        return new XPathAssert(actual.node(nodeName));
     }
 
     /**
-     * @see XmlVerifiable#node(String)
+     * @see XmlVerifiable#withAttribute(String, String)
      */
-    public XPathAssert field(Object value) {
+    public XPathAssert withAttribute(String attribute, String attributeValue) {
         isNotNull();
-        return new XPathAssert(actual.node(value));
+        return new XPathAssert(actual.withAttribute(attribute, attributeValue));
     }
 
     /**
      * @see XmlVerifiable#node(String...)
      */
-    public XPathAssert field(String... value) {
+    public XPathAssert node(String... nodeNames) {
         isNotNull();
-        return new XPathAssert(actual.node(value));
+        return new XPathAssert(actual.node(nodeNames));
     }
 
     /**
-     * @see XmlVerifiable#array()} (Object)
+     * @see XmlVerifiable#array(String)
      */
-    public XPathAssert array(Object value) {
+    public XPathAssert array(String value) {
         isNotNull();
         return new XPathAssert(actual.array(value));
     }
 
     /**
-     * @see XmlVerifiable#arrayField()
+     * @see XmlVerifiable#array(String)
      */
-    public XPathAssert arrayField() {
+    public XPathAssert contains(String value) {
         isNotNull();
-        return new XPathAssert(actual.arrayField());
-    }
-
-    /**
-     * @see XmlVerifiable#array()
-     */
-    public XPathAssert array() {
-        isNotNull();
-        return new XPathAssert(actual.array());
+        return new XPathAssert(((XmlArrayVerifiable) actual).contains(value));
     }
 
     /**
@@ -84,9 +79,13 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
         try {
             xmlVerifiable = actual.isEqualTo(value);
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
+            failWithXPathMessage();
         }
         return new XPathAssert(xmlVerifiable);
+    }
+
+    private void failWithXPathMessage() {
+        failWithMessage("Expected XML to match XPath <%s> but it didn't", actual.xPath());
     }
 
     /**
@@ -98,7 +97,7 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
         try {
             xmlVerifiable = actual.isEqualTo(value);
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
+            failWithXPathMessage();
         }
         return new XPathAssert(xmlVerifiable);
     }
@@ -112,7 +111,7 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
         try {
             xmlVerifiable = actual.matches(value);
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
+            failWithXPathMessage();
         }
         return new XPathAssert(xmlVerifiable);
     }
@@ -126,21 +125,7 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
         try {
             xmlVerifiable = actual.isEqualTo(value);
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
-        }
-        return new XPathAssert(xmlVerifiable);
-    }
-
-    /**
-     * @see XmlVerifiable#value()
-     */
-    public XPathAssert value() {
-        isNotNull();
-        XmlVerifiable xmlVerifiable = null;
-        try {
-            xmlVerifiable = actual.value();
-        } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
+            failWithXPathMessage();
         }
         return new XPathAssert(xmlVerifiable);
     }
@@ -148,25 +133,25 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
     /**
      * @see XmlVerifiable#isNull()
      */
-    @Override
     public void isNull() {
         isNotNull();
         try {
             actual.isNull();
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", actual.xPath());
+            failWithXPathMessage();
         }
     }
 
     /**
      * @see XmlVerifiable#matchesXPath(String)
      */
-    public XPathAssert matchesJsonPath(String jsonPath) {
+    public XPathAssert matchesXPath(String jsonPath) {
         isNotNull();
         try {
             actual.matchesXPath(jsonPath);
         } catch (IllegalStateException e) {
-            failWithMessage("Expected JSON to match JSON Path <%s> but it didn't", jsonPath);
+            failWithMessage("Expected XML [%s] to match XPath <%s> but it didn't",
+                    ((XmlAsserter)actual).cachedObjects.xmlAsString, jsonPath);
         }
         return this;
     }

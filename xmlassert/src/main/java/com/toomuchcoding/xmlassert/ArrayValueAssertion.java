@@ -6,22 +6,22 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
 
     final boolean checkingPrimitiveType;
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
                                   Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(cachedObjects, jsonPathBuffer, arrayName, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, arrayName, xmlAsserterConfiguration);
         this.checkingPrimitiveType = true;
     }
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
                                   Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration,
                                   boolean checkingPrimitiveType) {
-        super(cachedObjects, jsonPathBuffer, arrayName, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, arrayName, xmlAsserterConfiguration);
         this.checkingPrimitiveType = checkingPrimitiveType;
     }
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> jsonPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
                                   XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(cachedObjects, jsonPathBuffer, null, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, null, xmlAsserterConfiguration);
         this.checkingPrimitiveType = true;
     }
 
@@ -58,7 +58,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         if (!checkingPrimitiveType) {
             return super.isEqualTo(value);
         }
-        return equalityOnAPrimitive("[text()=" + escapeTextForXPath(value) + "]");
+        return equalityOnAPrimitive("[text()=" + escapeText(value) + "]");
     }
 
     @Override
@@ -85,7 +85,7 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
         }
         return equalityOnAPrimitive(
                 "[matches(text(), " +
-						escapeTextForXPath(value) + ")]");
+						escapeText(escapeRegex(value)) + ")]");
     }
 
     @Override
