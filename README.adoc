@@ -254,7 +254,7 @@ or the BDD version
 
 [source,java]
 ----
-com.toomuchcoding.xmlassert.BDDXmlAssertions.then(DocumentContext context);
+com.toomuchcoding.xmlassert.BDDXmlAssertions.then(Document context);
 com.toomuchcoding.xmlassert.BDDXmlAssertions.then(XmlAsString xmlAsString);
 com.toomuchcoding.xmlassert.BDDXmlAssertions.then(XmlVerifiable xmlVerifiable);
 ----
