@@ -14,4 +14,10 @@ public interface XmlArrayVerifiable extends XmlVerifiable {
      */
     XmlArrayVerifiable contains(String nodeName);
 
+    /**
+     * When you want to assert if an array is of given size
+     * @since 0.0.2
+     */
+    XmlArrayVerifiable hasSize(int size);
+
 }

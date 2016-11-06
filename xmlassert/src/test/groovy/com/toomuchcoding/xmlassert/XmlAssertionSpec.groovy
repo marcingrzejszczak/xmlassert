@@ -414,7 +414,6 @@ public class XmlAssertionSpec extends Specification {
             verifiable.xPath() == '''/root/authorities[matches(text(), '^[a-zA-Z0-9_\\- ]+$')]'''
     }
 
-    @Issue("#10")
     def 'should manage to parse array with string values'() {
         given:
             String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
@@ -429,6 +428,68 @@ public class XmlAssertionSpec extends Specification {
         and:
             v1.xPath() == '''/root/some_list[text()='name1']'''
             v2.xPath() == '''/root/some_list[text()='name2']'''
+    }
+
+    @Issue("#2")
+    def 'should allow nested calls with counting the elements size'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
+
+        expect:
+            def v1 = assertThat(xml).node("root").array("some_list").hasSize(2).isEqualTo("name1")
+        and:
+            v1.xPath() == '''/root/some_list[text()='name1']'''
+    }
+
+    @Issue("#2")
+    def 'should count the elements size'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
+
+        expect:
+            def v1 = assertThat(xml).node("root").array("some_list").hasSize(2)
+        and:
+            v1.xPath() == '''count(/root/some_list)'''
+    }
+
+    @Issue("#2")
+    def 'should throw exception if size is wrong'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
+
+        when:
+            assertThat(xml).node("root").array("some_list").hasSize(1)
+        then:
+            IllegalStateException e = thrown(IllegalStateException)
+            e.message.contains("has size [2] and not [1] for XPath <count(/root/some_list)>")
+    }
+
+    @Issue("#2")
+    def 'should return 0 if element is missing'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
+
+        when:
+            assertThat(xml).node("root").array("foo").hasSize(1)
+        then:
+            IllegalStateException e = thrown(IllegalStateException)
+            e.message.contains("has size [0] and not [1] for XPath <count(/root/foo)>")
     }
 
 }

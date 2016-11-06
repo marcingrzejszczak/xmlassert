@@ -63,6 +63,14 @@ public class XPathAssert extends AbstractAssert<XPathAssert, XmlVerifiable> {
     }
 
     /**
+     * @see XmlArrayVerifiable#hasSize(int)
+     */
+    public XPathAssert hasSize(int size) {
+        isNotNull();
+        return new XPathAssert(((XmlArrayVerifiable) actual).hasSize(size));
+    }
+
+    /**
      * @see XmlVerifiable#array(String)
      */
     public XPathAssert contains(String value) {

@@ -1,15 +1,15 @@
 package com.toomuchcoding.xmlassert;
 
-import org.eclipse.wst.xml.xpath2.processor.DOMLoader;
-import org.eclipse.wst.xml.xpath2.processor.XercesLoader;
-import org.w3c.dom.Document;
-
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+
+import org.eclipse.wst.xml.xpath2.processor.DOMLoader;
+import org.eclipse.wst.xml.xpath2.processor.XercesLoader;
+import org.w3c.dom.Document;
 
 /**
  * Entry point for assertions. Use the static factory method and you're ready to go!
@@ -23,6 +23,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class XmlAssertion {
     private final XmlCachedObjects cachedObjects;
     private final LinkedList<String> xPathBuffer = new LinkedList<String>();
+    private final LinkedList<String> specialCaseXPathBuffer = new LinkedList<String>();
     private final XmlAsserterConfiguration xmlAsserterConfiguration = new XmlAsserterConfiguration();
     private static final Map<String, XmlCachedObjects> CACHE = new ConcurrentHashMap<String, XmlCachedObjects>();
 
@@ -83,7 +84,7 @@ public class XmlAssertion {
     }
 
     private XmlVerifiable root() {
-        return new FieldAssertion(cachedObjects, xPathBuffer, "", xmlAsserterConfiguration).node("");
+        return new FieldAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer, "", xmlAsserterConfiguration).node("");
     }
 
 }

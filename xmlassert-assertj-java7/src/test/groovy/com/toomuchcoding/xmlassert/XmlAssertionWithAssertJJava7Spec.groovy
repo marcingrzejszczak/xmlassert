@@ -1,6 +1,7 @@
 package com.toomuchcoding.xmlassert
 
 import groovy.xml.MarkupBuilder
+import spock.lang.Issue
 import spock.lang.Shared
 import spock.lang.Specification
 import spock.lang.Unroll
@@ -8,7 +9,6 @@ import spock.lang.Unroll
 import static com.toomuchcoding.xmlassert.BDDXmlAssertions.then
 import static com.toomuchcoding.xmlassert.XmlAsString.asXml
 import static com.toomuchcoding.xmlassert.XmlAssertions.assertThat
-
 /**
  * @author Marcin Grzejszczak
  */
@@ -325,5 +325,63 @@ class XmlAssertionWithAssertJJava7Spec extends Specification {
         expect:
             assertThat(asXml(xml)).node("root").array("some_list").isEqualTo("name1")
             assertThat(asXml(xml)).node("root").array("some_list").isEqualTo("name2")
+    }
+
+    @Issue("#2")
+    def 'should allow nested calls with counting the elements size'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <some_list>name1</some_list>
+            <some_list>name2</some_list>
+        </root>'''
+
+        expect:
+            assertThat(asXml(xml)).node("root").array("some_list").hasSize(2).isEqualTo("name1")
+    }
+
+    @Issue("#2")
+    def 'should count the elements size'() {
+        given:
+        String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+    <root>
+        <some_list>name1</some_list>
+        <some_list>name2</some_list>
+    </root>'''
+
+        expect:
+            assertThat(asXml(xml)).node("root").array("some_list").hasSize(2)
+    }
+
+    @Issue("#2")
+    def 'should throw exception if size is wrong'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <some_list>name1</some_list>
+            <some_list>name2</some_list>
+        </root>'''
+
+        when:
+            assertThat(asXml(xml)).node("root").array("some_list").hasSize(1)
+        then:
+            IllegalStateException e = thrown(IllegalStateException)
+            e.message.contains("has size [2] and not [1] for XPath <count(/root/some_list)>")
+    }
+
+    @Issue("#2")
+    def 'should return 0 if element is missing'() {
+        given:
+            String xml =  '''<?xml version="1.0" encoding="UTF-8" ?>
+        <root>
+            <some_list>name1</some_list>
+            <some_list>name2</some_list>
+        </root>'''
+
+        when:
+            assertThat(asXml(xml)).node("root").array("foo").hasSize(1)
+        then:
+            IllegalStateException e = thrown(IllegalStateException)
+            e.message.contains("has size [0] and not [1] for XPath <count(/root/foo)>")
     }
 }

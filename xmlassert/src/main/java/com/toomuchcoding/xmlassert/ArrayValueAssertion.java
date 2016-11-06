@@ -1,27 +1,31 @@
 package com.toomuchcoding.xmlassert;
 
+import java.util.Iterator;
 import java.util.LinkedList;
+
+import org.eclipse.wst.xml.xpath2.api.Item;
+import org.eclipse.wst.xml.xpath2.api.ResultSequence;
 
 class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
 
     final boolean checkingPrimitiveType;
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer, LinkedList<String> specialCaseXPathBuffer,
                                   Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(cachedObjects, xPathBuffer, arrayName, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, specialCaseXPathBuffer, arrayName, xmlAsserterConfiguration);
         this.checkingPrimitiveType = true;
     }
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer, LinkedList<String> specialCaseXPathBuffer,
                                   Object arrayName, XmlAsserterConfiguration xmlAsserterConfiguration,
                                   boolean checkingPrimitiveType) {
-        super(cachedObjects, xPathBuffer, arrayName, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, specialCaseXPathBuffer, arrayName, xmlAsserterConfiguration);
         this.checkingPrimitiveType = checkingPrimitiveType;
     }
 
-    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
+    protected ArrayValueAssertion(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer, LinkedList<String> specialCaseXPathBuffer,
                                   XmlAsserterConfiguration xmlAsserterConfiguration) {
-        super(cachedObjects, xPathBuffer, null, xmlAsserterConfiguration);
+        super(cachedObjects, xPathBuffer, specialCaseXPathBuffer, null, xmlAsserterConfiguration);
         this.checkingPrimitiveType = true;
     }
 
@@ -32,8 +36,27 @@ class ArrayValueAssertion extends FieldAssertion implements XmlArrayVerifiable {
 
     @Override
     public XmlArrayVerifiable contains(String value) {
-        return new ArrayValueAssertion(cachedObjects, xPathBuffer, value,
+        return new ArrayValueAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer, value,
                 xmlAsserterConfiguration, false);
+    }
+
+    @Override
+    public XmlArrayVerifiable hasSize(int size) {
+        String xPath = "count(" + createXPathString() + ")";
+        ArrayValueAssertion verifiable = new ArrayValueAssertion(this, this.checkingPrimitiveType);
+        verifiable.specialCaseXPathBuffer.clear();
+        verifiable.specialCaseXPathBuffer.add(xPath);
+        String xPathString = verifiable.createSpecialCaseXPathString();
+        ResultSequence sequence = verifiable.resultSequence(xPathString);
+        Iterator<Item> iterator = sequence.iterator();
+        if (!iterator.hasNext()) {
+            throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] doesn't match the XPath <" + xPathString + ">");
+        }
+        int retrievedSize = Integer.valueOf(iterator.next().getStringValue());
+        if (retrievedSize != size) {
+            throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] has size [" + retrievedSize + "] and not [" + size + "] for XPath <" + xPathString + "> ");
+        }
+        return verifiable;
     }
 
     @Override

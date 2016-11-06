@@ -1,5 +1,9 @@
 package com.toomuchcoding.xmlassert;
 
+import java.util.LinkedList;
+import java.util.List;
+import java.util.regex.Pattern;
+
 import org.eclipse.wst.xml.xpath2.api.ResultSequence;
 import org.eclipse.wst.xml.xpath2.api.XPath2Expression;
 import org.eclipse.wst.xml.xpath2.processor.Engine;
@@ -7,10 +11,6 @@ import org.eclipse.wst.xml.xpath2.processor.internal.types.ElementType;
 import org.eclipse.wst.xml.xpath2.processor.util.DynamicContextBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import java.util.LinkedList;
-import java.util.List;
-import java.util.regex.Pattern;
 
 class XmlAsserter implements XmlVerifiable {
 
@@ -20,13 +20,16 @@ class XmlAsserter implements XmlVerifiable {
 
     protected final XmlCachedObjects cachedObjects;
     protected final LinkedList<String> xPathBuffer;
+    // for things like count(...)
+    protected final LinkedList<String> specialCaseXPathBuffer;
     protected final Object fieldName;
     protected final XmlAsserterConfiguration xmlAsserterConfiguration;
 
-    protected XmlAsserter(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer,
+    protected XmlAsserter(XmlCachedObjects cachedObjects, LinkedList<String> xPathBuffer, LinkedList<String> specialCaseXPathBuffer,
                           Object fieldName, XmlAsserterConfiguration xmlAsserterConfiguration) {
         this.cachedObjects = cachedObjects;
         this.xPathBuffer = new LinkedList<String>(xPathBuffer);
+        this.specialCaseXPathBuffer = new LinkedList<String>(specialCaseXPathBuffer);
         this.fieldName = fieldName;
         this.xmlAsserterConfiguration = xmlAsserterConfiguration;
     }
@@ -34,13 +37,14 @@ class XmlAsserter implements XmlVerifiable {
     protected XmlAsserter(XmlAsserter asserter) {
         this.cachedObjects = asserter.cachedObjects;
         this.xPathBuffer = new LinkedList<String>(asserter.xPathBuffer);
+        this.specialCaseXPathBuffer = new LinkedList<String>(asserter.specialCaseXPathBuffer);
         this.fieldName = asserter.fieldName;
         this.xmlAsserterConfiguration = asserter.xmlAsserterConfiguration;
     }
 
     @Override
     public FieldAssertion node(final String value) {
-        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, value,
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer, value,
                 xmlAsserterConfiguration);
         asserter.xPathBuffer.offer(String.valueOf(value));
         asserter.xPathBuffer.offer("/");
@@ -49,7 +53,7 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public XmlVerifiable withAttribute(String attribute, String attributeValue) {
-        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, fieldName,
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer, fieldName,
                 xmlAsserterConfiguration);
         if (asserter.xPathBuffer.peekLast().equals("/")) {
             asserter.xPathBuffer.removeLast();
@@ -74,8 +78,8 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public XmlArrayVerifiable array(final String value) {
-        ArrayValueAssertion asserter = new ArrayValueAssertion(cachedObjects, xPathBuffer, value,
-                xmlAsserterConfiguration);
+        ArrayValueAssertion asserter = new ArrayValueAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer,
+                value, xmlAsserterConfiguration);
         asserter.xPathBuffer.offer(String.valueOf(value));
         asserter.xPathBuffer.offer("/");
         return asserter;
@@ -186,16 +190,20 @@ class XmlAsserter implements XmlVerifiable {
         return this;
     }
 
-    private void check(String xPathString) {
+    protected void check(String xPathString) {
         if (xmlAsserterConfiguration.ignoreXPathException) {
             log.trace("WARNING!!! Overriding verification of the XPath. Your tests may pass even though they shouldn't");
             return;
         }
-        ResultSequence expr = xPathExpression(xPathString);
+        ResultSequence expr = resultSequence(xPathString);
         boolean xpathMatched = !expr.empty();
         if (!xpathMatched) {
             throw new IllegalStateException("Parsed XML [" + cachedObjects.xmlAsString + "] doesn't match the XPath <" + xPathString + ">");
         }
+    }
+
+    protected ResultSequence resultSequence(String xPathString) {
+        return xPathExpression(xPathString);
     }
 
     private ResultSequence xPathExpression(String xPathString) {
@@ -212,8 +220,16 @@ class XmlAsserter implements XmlVerifiable {
         check(createXPathString());
     }
 
-    private String createXPathString() {
-        LinkedList<String> queue = new LinkedList<String>(xPathBuffer);
+    protected String createXPathString() {
+        return createXPathString(xPathBuffer);
+    }
+
+    protected String createSpecialCaseXPathString() {
+        return createXPathString(specialCaseXPathBuffer);
+    }
+
+    protected String createXPathString(LinkedList<String> buffer) {
+        LinkedList<String> queue = new LinkedList<String>(buffer);
         StringBuilder stringBuffer = new StringBuilder();
         while (!queue.isEmpty()) {
             String value = queue.remove();
@@ -226,6 +242,9 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public String xPath() {
+        if (!specialCaseXPathBuffer.isEmpty()) {
+            return createSpecialCaseXPathString();
+        }
         return createXPathString();
     }
 
@@ -319,7 +338,7 @@ class XmlAsserter implements XmlVerifiable {
     @Override
     public String read() {
         String xpath = xPath();
-        ResultSequence expr = xPathExpression(xpath);
+        ResultSequence expr = resultSequence(xpath);
         if (expr.empty()) {
             throw new XmlAsserterXpathException(xPath(), cachedObjects.xmlAsString);
         }
