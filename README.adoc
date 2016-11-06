@@ -1,4 +1,4 @@
-:lib_version: 0.0.1
+:lib_version: 0.0.2
 
 image::https://travis-ci.org/marcingrzejszczak/xmlassert.svg?branch=master[Build Status, link=https://travis-ci.org/marcingrzejszczak/xmlassert]
 image::https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert/badge.svg?style=plastic[Maven Central, link="https://maven-badges.herokuapp.com/maven-central/com.toomuchcoding.xmlassert/xmlassert"]
