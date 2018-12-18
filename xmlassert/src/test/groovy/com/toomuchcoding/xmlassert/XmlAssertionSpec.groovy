@@ -41,6 +41,7 @@ public class XmlAssertionSpec extends Specification {
             assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                    || '''/some/nested[anothervalue=4]'''
             assertThat(xml1).node("some").node("nested").node("anothervalue")                                                                                                 || '''/some/nested/anothervalue'''
             assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id", "a").withAttribute("id2", "b")                                                  || '''/some/nested/withattr[@id='a'][@id2='b']'''
+            assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id")                                                || '''/some/nested/withattr/@id'''
             assertThat(xml1).node("some").node("nested").node("withattr").isEqualTo("foo").withAttribute("id", "a").withAttribute("id2", "b")                                 || '''/some/nested[withattr='foo']/withattr[@id='a'][@id2='b']'''
             assertThatXml(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                 || '''/some/nested[anothervalue=4]'''
             assertThat(xml1).node("some").node("nested").array("withlist").contains("name").isEqualTo("name1")                                                                || '''/some/nested/withlist[name='name1']'''
