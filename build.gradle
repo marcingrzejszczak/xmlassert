@@ -86,7 +86,3 @@ configure(subprojects) {
         apply from: "$rootDir/gradle/release.gradle"
     }
 }
-
-task wrapper(type: Wrapper) {
-    gradleVersion = '2.13'
-}
