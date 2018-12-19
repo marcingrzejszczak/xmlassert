@@ -80,6 +80,15 @@ class XmlAsserter implements XmlVerifiable {
     }
 
     @Override
+    public XmlVerifiable text() {
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer,
+                specialCaseXPathBuffer, fieldName,
+                xmlAsserterConfiguration);
+        asserter.xPathBuffer.offer("text()");
+        return asserter;
+    }
+
+    @Override
     public FieldAssertion node(String... nodeNames) {
         FieldAssertion assertion = null;
         for(String field : nodeNames) {

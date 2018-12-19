@@ -40,6 +40,7 @@ public class XmlAssertionSpec extends Specification {
             verifiable                                                                                                                                                        || expectedXPath
             assertThat(xml1).node("some").node("nested").node("anothervalue").isEqualTo(4)                                                                                    || '''/some/nested[anothervalue=4]'''
             assertThat(xml1).node("some").node("nested").node("anothervalue")                                                                                                 || '''/some/nested/anothervalue'''
+            assertThat(xml1).node("some").text()                                                                                            || '''/some/text()'''
             assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id", "a").withAttribute("id2", "b")                                                  || '''/some/nested/withattr[@id='a'][@id2='b']'''
             assertThat(xml1).node("some").node("nested").node("withattr").withAttribute("id")                                                || '''/some/nested/withattr/@id'''
             assertThat(xml1).node("some").node("nested").node("withattr").isEqualTo("foo").withAttribute("id", "a").withAttribute("id2", "b")                                 || '''/some/nested[withattr='foo']/withattr[@id='a'][@id2='b']'''
