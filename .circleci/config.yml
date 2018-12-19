@@ -1,0 +1,35 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: springcloud/pipeline-base
+    environment:
+      JAVA_TOOL_OPTIONS: "-Xms512m -Xmx768m"
+      GRADLE_OPTS: '-Dorg.gradle.jvmargs="-Xmx512m -Xmx768m -XX:+HeapDumpOnOutOfMemoryError" -Dorg.gradle.daemon=false'
+      TERM: dumb
+    branches:
+      ignore:
+        - gh-pages # list of branches to ignore
+    resource_class: large
+    steps:
+      - checkout
+      - run:
+          name: "Adding daemon entries for Gradle"
+          command: touch ~/.gradle/gradle.properties && echo "org.gradle.daemon=false" >> ~/.gradle/gradle.properties
+      - run:
+          name: "Running build"
+          command: ./gradlew clean build
+      - run:
+          name: "Aggregate test results"
+          when: always
+          command: |
+            mkdir -p $CIRCLE_TEST_REPORTS/junit/
+            find . -type f -regex ".*/target/.*-reports/.*" -exec cp {} $CIRCLE_TEST_REPORTS/junit/ \;
+            find . -type f -regex ".*/build/test-results/.*" -exec cp {} $CIRCLE_TEST_REPORTS/junit/ \;
+            bash <(curl -s https://codecov.io/bash)
+      - store_artifacts:
+          path: /junit/
+          destination: artifacts
+      - store_test_results:
+          path: /junit/
+          destination: testartifacts
