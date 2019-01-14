@@ -75,6 +75,12 @@ public interface XmlVerifiable extends IteratingOverArray, XmlReader {
     XmlVerifiable text();
 
     /**
+     * Adds an index to xPath
+     * @return new {@code XmlVerifiable}
+     */
+    XmlVerifiable index(int index);
+
+    /**
      * Field assertions. Traverses through the list of nodes and
      * adds a XPath entry for each one.
      */
