@@ -53,7 +53,8 @@ class XmlAsserter implements XmlVerifiable {
 
     @Override
     public XmlVerifiable withAttribute(String attribute, String attributeValue) {
-        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer, specialCaseXPathBuffer, fieldName,
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer,
+                specialCaseXPathBuffer, fieldName,
                 xmlAsserterConfiguration);
         if (asserter.xPathBuffer.peekLast().equals("/")) {
             asserter.xPathBuffer.removeLast();
@@ -64,6 +65,39 @@ class XmlAsserter implements XmlVerifiable {
         asserter.xPathBuffer.offer("[@" + String.valueOf(attribute) + "=" + escapeText(attributeValue) + "]");
         updateCurrentBuffer(asserter);
         asserter.checkBufferedXPathString();
+        return asserter;
+    }
+
+    @Override
+    public XmlVerifiable withAttribute(String attribute) {
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer,
+                specialCaseXPathBuffer, fieldName,
+                xmlAsserterConfiguration);
+        asserter.xPathBuffer.offer("@" + String.valueOf(attribute));
+        updateCurrentBuffer(asserter);
+        asserter.checkBufferedXPathString();
+        return asserter;
+    }
+
+    @Override
+    public XmlVerifiable text() {
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer,
+                specialCaseXPathBuffer, fieldName,
+                xmlAsserterConfiguration);
+        asserter.xPathBuffer.offer("text()");
+        return asserter;
+    }
+
+    @Override
+    public XmlVerifiable index(int index) {
+        FieldAssertion asserter = new FieldAssertion(cachedObjects, xPathBuffer,
+                specialCaseXPathBuffer, fieldName,
+                xmlAsserterConfiguration);
+        if (asserter.xPathBuffer.peekLast().equals("/")) {
+            asserter.xPathBuffer.removeLast();
+        }
+        asserter.xPathBuffer.offer("[" + index + "]");
+        asserter.xPathBuffer.offer("/");
         return asserter;
     }
 
